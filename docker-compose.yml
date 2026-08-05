@@ -6,10 +6,10 @@ services:
     container_name: freonn-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: freonn_platform
-      MYSQL_USER: freonn
-      MYSQL_PASSWORD: freonn
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-freonn_platform}
+      MYSQL_USER: ${MYSQL_USER:-freonn}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-freonn}
     ports:
       - "3306:3306"
     volumes:
@@ -24,12 +24,33 @@ services:
     image: alexxit/go2rtc:latest
     container_name: freonn-go2rtc
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "1984:1984"
     volumes:
       - go2rtc_data:/config
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: freonn-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
     environment:
-      - GO2RTC_API_PORT=1984
+      DATABASE_URL: mysql://${MYSQL_USER:-freonn}:${MYSQL_PASSWORD:-freonn}@mysql:3306/${MYSQL_DATABASE:-freonn_platform}
+      GO2RTC_API_URL: http://go2rtc:1984
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    command: >
+      sh -c "pnpm db:push -- --force && node dist/index.js"
 
 volumes:
   mysql_data:
   go2rtc_data:
+  uploads:
