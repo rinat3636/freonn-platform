@@ -21,6 +21,8 @@ const projectInput = z.object({
   customerId: z.number().int().optional(),
   primaryForemanId: z.number().int().optional(),
   budget: z.number().int().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 });
 
 const memberInput = z.object({
@@ -87,6 +89,8 @@ export const projectsRouter = router({
       address: input.address,
       startDate: input.startDate,
       plannedEndDate: input.plannedEndDate,
+      lat: input.lat,
+      lng: input.lng,
       directorId: ctx.user.id,
       customerId: input.customerId,
       primaryForemanId: input.primaryForemanId,
@@ -108,6 +112,8 @@ export const projectsRouter = router({
     if (input.data.customerId !== undefined) values.customerId = input.data.customerId;
     if (input.data.primaryForemanId !== undefined) values.primaryForemanId = input.data.primaryForemanId;
     if (input.data.budget !== undefined) values.budget = input.data.budget;
+    if (input.data.lat !== undefined) values.lat = input.data.lat;
+    if (input.data.lng !== undefined) values.lng = input.data.lng;
 
     await db.update(projects).set(values).where(eq(projects.id, input.id));
     await logActivity(db, input.id, ctx.user.id, "PROJECT_UPDATED", "project", input.id, values as Record<string, unknown>);
@@ -154,5 +160,17 @@ export const projectsRouter = router({
       .where(and(eq(projectMembers.projectId, input.projectId), eq(projectMembers.userId, input.userId)));
     await logActivity(db, input.projectId, ctx.user.id, "MEMBER_REMOVED", "projectMember", input.userId);
     return { success: true };
+  }),
+
+  geocode: protectedProcedure.input(z.object({ address: z.string().min(1) })).query(async ({ input }) => {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(input.address)}`;
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "FreonnPlatform/1.0" } });
+      const json = await res.json() as Array<{ lat: string; lon: string }>;
+      if (!Array.isArray(json) || json.length === 0) throw new Error("Адрес не найден");
+      return { lat: Number(json[0].lat), lng: Number(json[0].lon) };
+    } catch (e: any) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: e.message || "Ошибка геокодирования" });
+    }
   }),
 });

@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { int, json, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, index } from "drizzle-orm/mysql-core";
+import { int, json, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, double, index } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -27,6 +27,8 @@ export const projects = mysqlTable("projects", {
   startDate: timestamp("startDate"),
   plannedEndDate: timestamp("plannedEndDate"),
   actualEndDate: timestamp("actualEndDate"),
+  lat: double("lat"),
+  lng: double("lng"),
   directorId: int("directorId").notNull(),
   customerId: int("customerId"),
   primaryForemanId: int("primaryForemanId"),

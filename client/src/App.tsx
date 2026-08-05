@@ -3,6 +3,7 @@ import { Route, Switch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardPage from "@/pages/DashboardPage";
 import LoginPage from "@/pages/LoginPage";
+import MapPage from "@/pages/MapPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import ProjectPage from "@/pages/ProjectPage";
 
@@ -11,6 +12,7 @@ function AppRouter() {
     <Switch>
       <Route path="/login" component={LoginPage} />
       <Route path="/" component={DashboardPage} />
+      <Route path="/map" component={MapPage} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/projects/:id" component={ProjectPage} />
       <Route component={() => <div className="p-8 text-center">Страница не найдена</div>} />

@@ -8,24 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, MapPin, Loader2, Building2, Search } from "lucide-react";
+import { Plus, Calendar, MapPin, Loader2, Building2, Search, ArrowUpRight } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
 function daysLeft(end: Date | string | null | undefined): { text: string; color: string } {
   if (!end) return { text: "—", color: "bg-muted text-muted-foreground" };
   const diff = Math.ceil((new Date(end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return { text: `Просрочено ${Math.abs(diff)} дн.`, color: "bg-destructive/15 text-destructive border-destructive/20" };
+  if (diff < 0) return { text: `Просрочено ${Math.abs(diff)} дн.`, color: "bg-destructive/10 text-destructive border-destructive/20" };
   if (diff === 0) return { text: "Сегодня срок", color: "bg-amber-100 text-amber-700 border-amber-200" };
   if (diff <= 7) return { text: `Осталось ${diff} дн.`, color: "bg-amber-100 text-amber-700 border-amber-200" };
   return { text: `Осталось ${diff} дн.`, color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
 }
 
 function indicatorColor(progress: number, start?: string | Date | null, end?: string | Date | null): string {
-  if (!start || !end) return "bg-muted";
+  if (!start || !end) return "bg-primary";
   const total = new Date(end).getTime() - new Date(start).getTime();
   const elapsed = Date.now() - new Date(start).getTime();
-  if (total <= 0) return "bg-muted";
+  if (total <= 0) return "bg-primary";
   const expected = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
   const diff = progress - expected;
   if (diff >= -5) return "bg-emerald-500";
@@ -41,25 +41,46 @@ export default function DashboardPage() {
     onSuccess: () => {
       projects.refetch();
       setOpen(false);
+      setName("");
+      setAddress("");
+      setPlannedEndDate("");
+      setCoords(null);
       toast.success("Объект создан");
     },
     onError: e => toast.error(e.message),
   });
-
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [plannedEndDate, setPlannedEndDate] = useState("");
   const [search, setSearch] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const geocode = trpc.projects.geocode.useQuery(
+    { address: address.trim() },
+    { enabled: false, retry: 1, staleTime: Infinity, refetchOnWindowFocus: false }
+  );
 
   const onCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    if (!name.trim()) return toast.error("Введите название объекта");
     create.mutate({
-      name,
-      address: address || undefined,
+      name: name.trim(),
+      address: address.trim() || undefined,
       plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : undefined,
+      lat: coords?.lat,
+      lng: coords?.lng,
     });
+  };
+
+  const doGeocode = async () => {
+    if (!address.trim()) return toast.error("Введите адрес");
+    try {
+      const res = await geocode.refetch();
+      if (res.data) setCoords(res.data);
+      else toast.error("Адрес не найден");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка геокодирования");
+    }
   };
 
   const filtered = projects.data?.filter(p =>
@@ -83,26 +104,32 @@ export default function DashboardPage() {
                 <Plus className="mr-2 h-4 w-4" /> Новый объект
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Создать объект</DialogTitle>
+                <DialogTitle className="text-xl">Создать объект</DialogTitle>
               </DialogHeader>
               <form onSubmit={onCreate} className="space-y-4 mt-2">
                 <div className="space-y-2">
                   <Label>Название</Label>
-                  <Input value={name} onChange={e => setName(e.target.value)} required />
+                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Например, ЖК Северный" />
                 </div>
                 <div className="space-y-2">
                   <Label>Адрес</Label>
-                  <Input value={address} onChange={e => setAddress(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Input value={address} onChange={e => { setAddress(e.target.value); setCoords(null); }} placeholder="г. Москва, ул. ..." />
+                    <Button type="button" variant="outline" onClick={doGeocode} disabled={geocode.isFetching || !address.trim()}>
+                      {geocode.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Найти"}
+                    </Button>
+                  </div>
+                  {coords && <div className="text-xs text-emerald-600 font-medium">Координаты определены: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}</div>}
                 </div>
                 <div className="space-y-2">
                   <Label>Плановая дата сдачи</Label>
                   <Input type="date" value={plannedEndDate} onChange={e => setPlannedEndDate(e.target.value)} />
                 </div>
-                <Button type="submit" disabled={create.isPending}>
+                <Button type="submit" disabled={create.isPending} className="w-full">
                   {create.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Создать
+                  Создать объект
                 </Button>
               </form>
             </DialogContent>
@@ -110,37 +137,37 @@ export default function DashboardPage() {
         )}
       </DashboardHeader>
 
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
-        <Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+        <Card className="border-none shadow-sm">
           <CardContent className="py-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold">{projects.data?.length ?? 0}</div>
-              <div className="text-sm text-muted-foreground">Всего объектов</div>
+              <div className="text-2xl font-extrabold">{projects.data?.length ?? 0}</div>
+              <div className="text-sm text-muted-foreground font-medium">Всего объектов</div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-none shadow-sm">
           <CardContent className="py-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
-              <Plus className="h-5 w-5" />
+            <div className="h-11 w-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+              <ArrowUpRight className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold">{activeCount}</div>
-              <div className="text-sm text-muted-foreground">Активных</div>
+              <div className="text-2xl font-extrabold">{activeCount}</div>
+              <div className="text-sm text-muted-foreground font-medium">Активных</div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-none shadow-sm sm:col-span-2 lg:col-span-1">
           <CardContent className="py-5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+            <div className="h-11 w-11 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
               <Calendar className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold">{overdueCount}</div>
-              <div className="text-sm text-muted-foreground">Просрочено</div>
+              <div className="text-2xl font-extrabold">{overdueCount}</div>
+              <div className="text-sm text-muted-foreground font-medium">Просрочено</div>
             </div>
           </CardContent>
         </Card>
@@ -152,16 +179,18 @@ export default function DashboardPage() {
           placeholder="Поиск по объектам…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="pl-9 max-w-md"
+          className="pl-10 max-w-md h-11 rounded-xl"
         />
       </div>
 
-      {projects.isLoading && <div className="text-muted-foreground">Загрузка объектов…</div>}
+      {projects.isLoading && <div className="text-muted-foreground font-medium">Загрузка объектов…</div>}
       {!projects.isLoading && filtered?.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Building2 className="h-16 w-16 mb-4 opacity-20" />
-          <p className="text-lg font-medium">{search ? "Ничего не найдено" : "Нет доступных объектов"}</p>
-          {isDirector && !search && <p className="text-sm">Создайте первый объект, чтобы начать</p>}
+          <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-5">
+            <Building2 className="h-10 w-10 opacity-40" />
+          </div>
+          <p className="text-lg font-bold text-foreground">{search ? "Ничего не найдено" : "Нет доступных объектов"}</p>
+          {isDirector && !search && <p className="text-sm mt-1">Создайте первый объект, чтобы начать</p>}
         </div>
       )}
 
@@ -171,29 +200,31 @@ export default function DashboardPage() {
           const barColor = indicatorColor(project.progressPercent, project.startDate, project.plannedEndDate);
           return (
             <Link key={project.id} href={`/projects/${project.id}`}>
-              <Card className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all h-full">
+              <Card className="cursor-pointer group hover:-translate-y-1 hover:shadow-lg hover:border-primary/30 transition-all duration-300 h-full border border-border/50">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg font-semibold line-clamp-2">{project.name}</CardTitle>
-                    <Badge className={left.color} variant="outline">{left.text}</Badge>
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="text-lg font-bold line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                      {project.name}
+                    </CardTitle>
+                    <Badge className={`shrink-0 ${left.color}`} variant="outline">{left.text}</Badge>
                   </div>
                   {project.address && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3 shrink-0" /> {project.address}
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" /> {project.address}
                     </div>
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-2 flex items-center justify-between text-sm">
+                  <div className="mb-2 flex items-center justify-between text-sm font-medium">
                     <span className="text-muted-foreground">Прогресс</span>
-                    <span className="font-medium">{project.progressPercent}%</span>
+                    <span className="font-bold">{project.progressPercent}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${project.progressPercent}%` }} />
+                  <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div className={`h-full rounded-full ${barColor} transition-all duration-500`} style={{ width: `${project.progressPercent}%` }} />
                   </div>
                   {project.plannedEndDate && (
-                    <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3 shrink-0" /> Сдача: {new Date(project.plannedEndDate).toLocaleDateString("ru-RU")}
+                    <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <Calendar className="h-3.5 w-3.5 shrink-0" /> Сдача: {new Date(project.plannedEndDate).toLocaleDateString("ru-RU")}
                     </div>
                   )}
                 </CardContent>

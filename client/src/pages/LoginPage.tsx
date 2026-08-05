@@ -12,10 +12,6 @@ import { Building2, Loader2 } from "lucide-react";
 export default function LoginPage() {
   const { setToken } = useAuth();
   const [tab, setTab] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<"customer" | "foreman" | "director">("customer");
 
   const login = trpc.auth.login.useMutation({
     onSuccess: data => {
@@ -36,15 +32,19 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
-    const emailValue = (form.elements.namedItem("email") as HTMLInputElement)?.value ?? email;
-    const passwordValue = (form.elements.namedItem("password") as HTMLInputElement)?.value ?? password;
-    const nameValue = (form.elements.namedItem("name") as HTMLInputElement)?.value ?? name;
-    const roleValue = ((form.elements.namedItem("role") as HTMLSelectElement)?.value ?? role) as any;
-    if (!emailValue || !passwordValue) return;
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim();
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const name = (form.elements.namedItem("name") as HTMLInputElement)?.value.trim() || email;
+    const role = ((form.elements.namedItem("role") as HTMLSelectElement)?.value || "customer") as any;
+
+    if (!email || !password) return toast.error("Введите email и пароль");
+    if (tab === "register" && !name) return toast.error("Введите имя");
+    if (password.length < 6) return toast.error("Пароль должен быть не короче 6 символов");
+
     if (tab === "login") {
-      login.mutate({ email: emailValue, password: passwordValue });
+      login.mutate({ email, password });
     } else {
-      register.mutate({ email: emailValue, password: passwordValue, name: nameValue || emailValue, role: roleValue });
+      register.mutate({ email, password, name, role });
     }
   };
 
@@ -54,56 +54,56 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="h-12 w-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+          <div className="h-12 w-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/25">
             <Building2 className="h-7 w-7" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">FREONN</h1>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">FREONN</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
           </div>
         </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">{tab === "login" ? "Вход в систему" : "Регистрация"}</CardTitle>
+        <Card className="shadow-2xl border-0 overflow-hidden">
+          <CardHeader className="text-center pb-2 pt-7">
+            <CardTitle className="text-xl font-bold">
+              {tab === "login" ? "Вход в систему" : "Регистрация"}
+            </CardTitle>
             <CardDescription>Управление строительными объектами</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-7">
             <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login" onClick={() => setTab("login")}>Вход</TabsTrigger>
-                <TabsTrigger value="register" onClick={() => setTab("register")}>Регистрация</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 p-1 bg-muted/60 rounded-xl h-11">
+                <TabsTrigger value="login" onClick={() => setTab("login")} className="rounded-lg text-sm font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Вход
+                </TabsTrigger>
+                <TabsTrigger value="register" onClick={() => setTab("register")} className="rounded-lg text-sm font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  Регистрация
+                </TabsTrigger>
               </TabsList>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.ru" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Пароль</Label>
-                  <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} placeholder="••••••" />
-                </div>
-                {tab === "register" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Имя / название</Label>
-                      <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Иван Петров" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="role">Роль</Label>
-                      <select
-                        id="role"
-                        value={role}
-                        onChange={e => setRole(e.target.value as any)}
-                        className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-ring"
-                      >
-                        <option value="customer">Заказчик</option>
-                        <option value="foreman">Прораб</option>
-                        <option value="director">Директор</option>
-                      </select>
-                    </div>
-                  </>
-                )}
+              <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                <TabsContent value="login" className="mt-0 space-y-4">
+                  <LoginFields />
+                </TabsContent>
+                <TabsContent value="register" className="mt-0 space-y-4">
+                  <LoginFields />
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Имя / название</Label>
+                    <Input id="name" name="name" autoComplete="name" placeholder="Иван Петров" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Роль</Label>
+                    <select
+                      id="role"
+                      name="role"
+                      defaultValue="customer"
+                      className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-ring focus:outline-none transition-shadow"
+                    >
+                      <option value="customer">Заказчик</option>
+                      <option value="foreman">Прораб</option>
+                      <option value="director">Директор</option>
+                    </select>
+                  </div>
+                </TabsContent>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {tab === "login" ? "Войти" : "Зарегистрироваться"}
@@ -114,5 +114,20 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function LoginFields() {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" name="email" type="email" autoComplete="email" placeholder="you@company.ru" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Пароль</Label>
+        <Input id="password" name="password" type="password" autoComplete="current-password" placeholder="••••••" />
+      </div>
+    </>
   );
 }
