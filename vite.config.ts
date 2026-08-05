@@ -180,20 +180,8 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) {
-            return "vendor-react";
-          }
-          if (id.includes("node_modules/framer-motion/")) {
-            return "vendor-motion";
-          }
-          if (id.includes("node_modules/recharts/") || id.includes("node_modules/d3-")) {
-            return "vendor-charts";
-          }
-          if (id.includes("node_modules/@radix-ui/")) {
-            return "vendor-radix";
-          }
-        },
+        // Keep all vendor code in one chunk to avoid circular imports between
+        // React and use-sync-external-store when they are split apart.
       },
     },
   },
