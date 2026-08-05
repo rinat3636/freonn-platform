@@ -171,17 +171,33 @@ export default defineConfig(({ mode }) => ({
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
-  esbuild: {
-    drop: [],
-  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        // Keep all vendor code in one chunk to avoid circular imports between
-        // React and use-sync-external-store when they are split apart.
+        manualChunks(id) {
+          // Keep React and the store shim in the same chunk so they do not
+          // create a circular dependency across separate chunks.
+          if (
+            id.includes("node_modules/react") ||
+            id.includes("node_modules/react-dom") ||
+            id.includes("node_modules/scheduler") ||
+            id.includes("node_modules/use-sync-external-store")
+          ) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/framer-motion")) {
+            return "vendor-motion";
+          }
+          if (id.includes("node_modules/recharts") || id.includes("node_modules/d3-")) {
+            return "vendor-charts";
+          }
+          if (id.includes("node_modules/@radix-ui/")) {
+            return "vendor-radix";
+          }
+        },
       },
     },
   },
