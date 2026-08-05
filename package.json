@@ -1,6 +1,7 @@
 {
-  "name": "metalstroy-premium",
+  "name": "freonn-platform",
   "version": "1.0.0",
+  "description": "Freonn construction object management platform",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -8,18 +9,15 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && tsx scripts/postbuild-optimize.ts && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && node node_modules/puppeteer/install.mjs",
+    "build": "vite build && tsx scripts/postbuild-optimize.ts && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "build:ci": "vite build && tsx scripts/postbuild-optimize.ts && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "images:optimize": "node scripts/optimize-public-images.mjs",
-    "seo:audit": "tsx scripts/seo-audit.ts",
-    "seo:inventory": "tsx scripts/seo-inventory.ts",
-    "seo:docs": "tsx scripts/generate-seo-docs.mjs",
-    "k6:smoke": "k6 run scripts/k6/smoke.js"
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -53,7 +51,10 @@
     "@trpc/client": "^11.6.0",
     "@trpc/react-query": "^11.6.0",
     "@trpc/server": "^11.6.0",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/multer": "^2.2.0",
     "axios": "^1.12.0",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -68,6 +69,7 @@
     "input-otp": "^1.4.2",
     "jose": "6.1.0",
     "lucide-react": "^0.453.0",
+    "multer": "1.4.5-lts.2",
     "mysql2": "^3.15.0",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",

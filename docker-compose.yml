@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: freonn-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: freonn_platform
+      MYSQL_USER: freonn
+      MYSQL_PASSWORD: freonn
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    container_name: freonn-go2rtc
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - go2rtc_data:/config
+    environment:
+      - GO2RTC_API_PORT=1984
+
+volumes:
+  mysql_data:
+  go2rtc_data:

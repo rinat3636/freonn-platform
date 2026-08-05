@@ -1,7 +1,7 @@
 {
-  "name": "Freonn — Промышленные здания под ключ",
-  "short_name": "Freonn",
-  "description": "Строительство промышленных зданий под ключ: ангары, склады, производственные здания из металлоконструкций. Более 500 объектов с 2011 года.",
+  "name": "Freonn Platform — управление объектами",
+  "short_name": "Freonn Platform",
+  "description": "Платформа управления строительными объектами: прогресс, документы, фото, камеры, чат.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
@@ -9,22 +9,6 @@
   "lang": "ru-RU",
   "orientation": "any",
   "icons": [
-    {
-      "src": "/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    },
-    {
-      "src": "/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
@@ -38,13 +22,5 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["business", "construction"],
-  "screenshots": [
-    {
-      "src": "/og-image.jpg",
-      "sizes": "1200x630",
-      "type": "image/jpeg",
-      "label": "Freonn — строительство промышленных зданий"
-    }
-  ]
+  "categories": ["business", "construction"]
 }
