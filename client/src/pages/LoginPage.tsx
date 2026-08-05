@@ -33,13 +33,18 @@ export default function LoginPage() {
     onError: e => toast.error(e.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const form = e.currentTarget;
+    const emailValue = (form.elements.namedItem("email") as HTMLInputElement)?.value ?? email;
+    const passwordValue = (form.elements.namedItem("password") as HTMLInputElement)?.value ?? password;
+    const nameValue = (form.elements.namedItem("name") as HTMLInputElement)?.value ?? name;
+    const roleValue = ((form.elements.namedItem("role") as HTMLSelectElement)?.value ?? role) as any;
+    if (!emailValue || !passwordValue) return;
     if (tab === "login") {
-      login.mutate({ email, password });
+      login.mutate({ email: emailValue, password: passwordValue });
     } else {
-      register.mutate({ email, password, name: name || email, role });
+      register.mutate({ email: emailValue, password: passwordValue, name: nameValue || emailValue, role: roleValue });
     }
   };
 
