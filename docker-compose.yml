@@ -48,7 +48,7 @@ services:
     volumes:
       - uploads:/app/uploads
     command: >
-      sh -c "pnpm db:push -- --force && node dist/index.js"
+      sh -c "pnpm db:push --force && node dist/index.js"
 
 volumes:
   mysql_data:
