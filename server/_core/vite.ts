@@ -1,5 +1,4 @@
 import express, { type Express } from "express";
-import compression from "compression";
 import fs from "fs";
 import path from "path";
 
@@ -46,11 +45,6 @@ export function serveStatic(app: Express) {
   if (!fs.existsSync(distPath)) {
     console.error(`Could not find the build directory: ${distPath}, make sure to build the client first`);
   }
-
-  app.use(compression({ filter: (req, res) => {
-    if (req.headers["x-no-compression"]) return false;
-    return compression.filter(req, res as any);
-  } }));
 
   const assetsPath = path.resolve(distPath, "assets");
   const corsStatic = { setHeaders: (res: express.Response) => res.setHeader("Access-Control-Allow-Origin", "*") };
