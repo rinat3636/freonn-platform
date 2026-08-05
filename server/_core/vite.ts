@@ -1,5 +1,5 @@
 import express, { type Express } from "express";
-import compression from "compression";
+import expressStaticGzip from "express-static-gzip";
 import fs from "fs";
 import path from "path";
 
@@ -47,12 +47,19 @@ export function serveStatic(app: Express) {
     console.error(`Could not find the build directory: ${distPath}, make sure to build the client first`);
   }
 
-  app.use(compression({ threshold: 1024 }));
-
   const assetsPath = path.resolve(distPath, "assets");
-  const corsStatic = { setHeaders: (res: express.Response) => res.setHeader("Access-Control-Allow-Origin", "*") };
-  app.use("/assets", express.static(assetsPath, { maxAge: "1y", immutable: true, index: false, ...corsStatic }));
-  app.use(express.static(distPath, { index: false, maxAge: "30d", ...corsStatic }));
+  const staticOptions: any = {
+    setHeaders: (res: any) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    },
+    index: false,
+  };
+
+  // Serve pre-compressed build assets. Falls back to the uncompressed file if the
+  // browser does not accept the encoding, avoiding runtime compression overhead.
+  const gzipOptions = { enableBrotli: true, orderPreference: ["br", "gzip"], serveStatic: { maxAge: "1y", immutable: true, ...staticOptions } };
+  app.use("/assets", expressStaticGzip(assetsPath, gzipOptions));
+  app.use(expressStaticGzip(distPath, { enableBrotli: true, orderPreference: ["br", "gzip"], serveStatic: { maxAge: "30d", ...staticOptions } }));
 
   app.use("*", (req, res) => {
     try {

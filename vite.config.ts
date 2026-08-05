@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import { compression } from "vite-plugin-compression2";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
@@ -160,7 +161,7 @@ function manusPluginsForMode(mode: string): Plugin[] {
 }
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), tailwindcss(), jsxLocPlugin(), ...manusPluginsForMode(mode)],
+  plugins: [react(), tailwindcss(), jsxLocPlugin(), compression({ algorithm: "gzip" }), ...manusPluginsForMode(mode)],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
