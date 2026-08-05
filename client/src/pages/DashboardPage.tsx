@@ -226,10 +226,10 @@ export default function DashboardPage() {
         )}
       </DashboardHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-        <Card className="border-none shadow-sm">
-          <CardContent className="py-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+      <div className="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="app-elevated rounded-2xl border border-border/50">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Building2 className="h-5 w-5" />
             </div>
             <div>
@@ -242,9 +242,9 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm">
-          <CardContent className="py-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+        <Card className="app-elevated rounded-2xl border border-border/50">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <ArrowUpRight className="h-5 w-5" />
             </div>
             <div>
@@ -255,9 +255,9 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm sm:col-span-2 lg:col-span-1">
-          <CardContent className="py-5 flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+        <Card className="app-elevated rounded-2xl border border-border/50 sm:col-span-2 lg:col-span-1">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
               <Calendar className="h-5 w-5" />
             </div>
             <div>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
           placeholder="Поиск по объектам…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="pl-10 max-w-md h-11 rounded-xl"
+          className="app-elevated h-12 max-w-md rounded-2xl border-border/60 bg-card pl-10"
         />
       </div>
 
@@ -299,7 +299,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {filtered?.map(project => {
           const left = daysLeft(project.plannedEndDate);
           const barColor = indicatorColor(
@@ -309,10 +309,10 @@ export default function DashboardPage() {
           );
           return (
             <Link key={project.id} href={`/projects/${project.id}`}>
-              <Card className="cursor-pointer group hover:-translate-y-1 hover:shadow-lg hover:border-primary/30 transition-all duration-300 h-full rounded-2xl border border-border/50 shadow-sm">
-                <CardHeader className="pb-2">
+              <Card className="app-elevated group h-full cursor-pointer rounded-2xl border border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg">
+                <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="flex items-start gap-2 text-lg font-bold line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                    <CardTitle className="flex items-start gap-2 text-xl font-extrabold leading-tight transition-colors line-clamp-2 group-hover:text-primary">
                       <span
                         className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${project.status === "active" ? "bg-emerald-500" : project.status === "completed" ? "bg-slate-400" : project.status === "paused" ? "bg-amber-500" : "bg-red-500"}`}
                       />
@@ -339,7 +339,7 @@ export default function DashboardPage() {
                       {project.progressPercent}%
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
                     <div
                       className={`h-full rounded-full ${barColor} transition-all duration-500`}
                       style={{ width: `${project.progressPercent}%` }}

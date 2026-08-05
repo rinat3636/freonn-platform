@@ -149,6 +149,44 @@
   }
 }
 
+/* Platform-only theme. Marketing pages continue using the global tokens above. */
+.app-theme {
+  --background: #f4f5f8;
+  --foreground: #101219;
+  --card: #ffffff;
+  --card-foreground: #101219;
+  --popover: #ffffff;
+  --popover-foreground: #101219;
+  --primary: #e01e26;
+  --primary-foreground: #ffffff;
+  --secondary: #edeff3;
+  --secondary-foreground: #101219;
+  --muted: #edeff3;
+  --muted-foreground: #697086;
+  --accent: #eef1f6;
+  --accent-foreground: #101219;
+  --destructive: #e01e26;
+  --destructive-foreground: #ffffff;
+  --border: rgba(16, 18, 25, 0.08);
+  --input: rgba(16, 18, 25, 0.1);
+  --ring: #e01e26;
+  --radius: 0.9rem;
+  --sidebar: #0e1016;
+  --sidebar-foreground: #c6c9d2;
+  --sidebar-primary: #e01e26;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #e01e26;
+}
+
+.app-theme .app-elevated {
+  box-shadow:
+    0 1px 2px rgba(16, 18, 25, 0.04),
+    0 8px 24px -12px rgba(16, 18, 25, 0.12);
+}
+
 @layer components {
   .container {
     width: 100%;

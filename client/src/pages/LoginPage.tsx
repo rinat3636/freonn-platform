@@ -65,7 +65,7 @@ export default function LoginPage() {
   const loading = login.isPending || register.isPending;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top_right,rgba(199,20,30,0.10),transparent_36%),linear-gradient(135deg,var(--background),var(--muted))]">
+    <div className="app-theme flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_right,rgba(224,30,38,0.12),transparent_36%),linear-gradient(135deg,var(--background),var(--muted))] p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center justify-center gap-2 mb-8">
           <FreonnLogo height={52} showPro={false} />

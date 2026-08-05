@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import * as L from "leaflet";
 import { trpc } from "@/lib/trpc";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Camera, MapPin, Loader2, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
+import MapViewport from "@/components/MapViewport";
 import "leaflet/dist/leaflet.css";
 
 const statusLabels: Record<string, string> = {
@@ -43,7 +44,9 @@ function pinIcon(status?: string | null) {
 
 function daysLeft(end: Date | string | null | undefined): string {
   if (!end) return "—";
-  const diff = Math.ceil((new Date(end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const diff = Math.ceil(
+    (new Date(end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  );
   if (diff < 0) return `Просрочено ${Math.abs(diff)} дн.`;
   if (diff === 0) return "Сегодня срок";
   return `Осталось ${diff} дн.`;
@@ -52,44 +55,85 @@ function daysLeft(end: Date | string | null | undefined): string {
 export default function MapPage() {
   const projects = trpc.projects.list.useQuery();
   const [openId, setOpenId] = useState<number | null>(null);
-
-  const center = useMemo(() => {
-    const withCoords = projects.data?.filter(p => p.lat != null && p.lng != null);
-    if (!withCoords?.length) return [55.7558, 37.6173] as [number, number];
-    const lat = withCoords.reduce((s, p) => s + (p.lat ?? 0), 0) / withCoords.length;
-    const lng = withCoords.reduce((s, p) => s + (p.lng ?? 0), 0) / withCoords.length;
-    return [lat, lng] as [number, number];
-  }, [projects.data]);
+  const [positions, setPositions] = useState<Record<number, [number, number]>>(
+    {}
+  );
+  const setPosition = useCallback(
+    (projectId: number, position: [number, number]) => {
+      setPositions(current => {
+        const previous = current[projectId];
+        if (previous?.[0] === position[0] && previous?.[1] === position[1])
+          return current;
+        return { ...current, [projectId]: position };
+      });
+    },
+    []
+  );
 
   return (
-    <div className="h-[calc(100vh-64px)] -mx-4 md:-mx-6 -mt-4 md:-mt-6 relative bg-muted/30">
+    <div className="relative -mx-4 -mt-4 min-h-[480px] h-[calc(100vh-64px)] bg-muted/30 md:-mx-6 md:-mt-6">
       {projects.isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-[500] bg-background/60">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
-      <MapContainer center={center} zoom={10} className="h-full w-full" scrollWheelZoom>
+      <MapContainer
+        center={[55.7558, 37.6173]}
+        zoom={10}
+        zoomControl={true}
+        className="h-full min-h-[480px] w-full"
+        scrollWheelZoom
+      >
+        <MapViewport positions={positions} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {projects.data?.map(p => (
-          <ProjectMarker key={p.id} project={p} isOpen={openId === p.id} onOpen={() => setOpenId(p.id)} onClose={() => setOpenId(null)} />
+          <ProjectMarker
+            key={p.id}
+            project={p}
+            isOpen={openId === p.id}
+            onOpen={() => setOpenId(p.id)}
+            onClose={() => setOpenId(null)}
+            onPosition={setPosition}
+          />
         ))}
       </MapContainer>
     </div>
   );
 }
 
-function ProjectMarker({ project, isOpen, onOpen, onClose }: { project: any; isOpen: boolean; onOpen: () => void; onClose: () => void }) {
-  const hasCoords = project.lat != null && project.lng != null;
-  const geocode = trpc.projects.geocode.useQuery(
+function ProjectMarker({
+  project,
+  isOpen,
+  onOpen,
+  onClose,
+  onPosition,
+}: {
+  project: any;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onPosition: (projectId: number, position: [number, number]) => void;
+}) {
+  const { data: geocoded } = trpc.projects.geocode.useQuery(
     { address: project.address ?? "" },
-    { enabled: !hasCoords && !!project.address, retry: 1, staleTime: Infinity, refetchOnWindowFocus: false }
+    {
+      enabled:
+        (project.lat == null || project.lng == null) && !!project.address,
+      retry: 1,
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+    }
   );
+  const hasCoords = project.lat != null && project.lng != null;
+  const lat = hasCoords ? project.lat : geocoded?.lat;
+  const lng = hasCoords ? project.lng : geocoded?.lng;
 
-  const lat = hasCoords ? project.lat : geocode.data?.lat;
-  const lng = hasCoords ? project.lng : geocode.data?.lng;
+  useEffect(() => {
+    if (lat != null && lng != null) onPosition(project.id, [lat, lng]);
+  }, [lat, lng, onPosition, project.id]);
 
   if (lat == null || lng == null) return null;
 
@@ -107,7 +151,10 @@ function ProjectMarker({ project, isOpen, onOpen, onClose }: { project: any; isO
 }
 
 function PopupContent({ project, isOpen }: { project: any; isOpen: boolean }) {
-  const cameras = trpc.cameras.list.useQuery({ projectId: project.id }, { enabled: isOpen });
+  const cameras = trpc.cameras.list.useQuery(
+    { projectId: project.id },
+    { enabled: isOpen }
+  );
   const status = statusLabels[project.status] ?? project.status;
   const statusColor = statusBadgeColors[project.status] ?? "bg-muted";
 
@@ -115,11 +162,19 @@ function PopupContent({ project, isOpen }: { project: any; isOpen: boolean }) {
     <div className="space-y-3 min-w-[260px]">
       <div>
         <h3 className="font-bold text-base leading-tight">{project.name}</h3>
-        {project.address && <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {project.address}</div>}
+        {project.address && (
+          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            <MapPin className="h-3 w-3" /> {project.address}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className={`${statusColor} border font-medium text-xs`}>{status}</Badge>
-        <Badge variant="outline" className="font-medium text-xs">{daysLeft(project.plannedEndDate)}</Badge>
+        <Badge className={`${statusColor} border font-medium text-xs`}>
+          {status}
+        </Badge>
+        <Badge variant="outline" className="font-medium text-xs">
+          {daysLeft(project.plannedEndDate)}
+        </Badge>
       </div>
       <div>
         <div className="flex items-center justify-between text-xs font-medium mb-1">
@@ -145,7 +200,9 @@ function PopupContent({ project, isOpen }: { project: any; isOpen: boolean }) {
           </div>
         )}
         {!cameras.isLoading && cameras.data?.length === 0 && (
-          <div className="text-xs text-muted-foreground">Камеры не подключены</div>
+          <div className="text-xs text-muted-foreground">
+            Камеры не подключены
+          </div>
         )}
         {cameras.data && cameras.data.length > 0 && (
           <div className="space-y-2">
@@ -153,14 +210,21 @@ function PopupContent({ project, isOpen }: { project: any; isOpen: boolean }) {
               <div key={cam.id}>
                 <div className="text-xs font-semibold mb-1">{cam.name}</div>
                 {cam.hlsUrl ? (
-                  <HlsPlayer src={cam.hlsUrl} className="aspect-video w-full rounded-lg bg-black" />
+                  <HlsPlayer
+                    src={cam.hlsUrl}
+                    className="aspect-video w-full rounded-lg bg-black"
+                  />
                 ) : (
-                  <div className="aspect-video w-full rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground">Нет потока</div>
+                  <div className="aspect-video w-full rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                    Нет потока
+                  </div>
                 )}
               </div>
             ))}
             {cameras.data.length > 1 && (
-              <div className="text-xs text-muted-foreground">+{cameras.data.length - 1} камера</div>
+              <div className="text-xs text-muted-foreground">
+                +{cameras.data.length - 1} камера
+              </div>
             )}
           </div>
         )}
