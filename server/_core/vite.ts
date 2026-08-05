@@ -53,8 +53,9 @@ export function serveStatic(app: Express) {
   } }));
 
   const assetsPath = path.resolve(distPath, "assets");
-  app.use("/assets", express.static(assetsPath, { maxAge: "1y", immutable: true, index: false }));
-  app.use(express.static(distPath, { index: false, maxAge: "30d" }));
+  const corsStatic = { setHeaders: (res: express.Response) => res.setHeader("Access-Control-Allow-Origin", "*") };
+  app.use("/assets", express.static(assetsPath, { maxAge: "1y", immutable: true, index: false, ...corsStatic }));
+  app.use(express.static(distPath, { index: false, maxAge: "30d", ...corsStatic }));
 
   app.use("*", (req, res) => {
     try {
