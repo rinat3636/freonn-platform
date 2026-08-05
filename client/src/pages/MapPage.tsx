@@ -10,26 +10,36 @@ import { Link } from "wouter";
 import "leaflet/dist/leaflet.css";
 
 const statusLabels: Record<string, string> = {
-  planned: "Запланирован",
   active: "В работе",
-  done: "Выполнен",
-  blocked: "Приостановлен",
+  paused: "Приостановлен",
+  completed: "Завершен",
+  cancelled: "Отменен",
 };
 
-const statusColors: Record<string, string> = {
-  planned: "bg-slate-100 text-slate-700 border-slate-200",
+const statusBadgeColors: Record<string, string> = {
   active: "bg-blue-100 text-blue-700 border-blue-200",
-  done: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  blocked: "bg-amber-100 text-amber-700 border-amber-200",
+  paused: "bg-amber-100 text-amber-700 border-amber-200",
+  completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  cancelled: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-const pinIcon = L.divIcon({
-  className: "text-primary",
-  html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="40"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
-  iconSize: [32, 40],
-  iconAnchor: [16, 40],
-  popupAnchor: [0, -42],
-});
+const statusPinColors: Record<string, string> = {
+  active: "#2563EB",
+  paused: "#F59E0B",
+  completed: "#10B981",
+  cancelled: "#6B7280",
+};
+
+function pinIcon(status?: string | null) {
+  const color = statusPinColors[status ?? ""] ?? "#ED1C24";
+  return L.divIcon({
+    className: "",
+    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="32" height="40"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`,
+    iconSize: [32, 40],
+    iconAnchor: [16, 40],
+    popupAnchor: [0, -42],
+  });
+}
 
 function daysLeft(end: Date | string | null | undefined): string {
   if (!end) return "—";
@@ -86,7 +96,7 @@ function ProjectMarker({ project, isOpen, onOpen, onClose }: { project: any; isO
   return (
     <Marker
       position={[lat, lng]}
-      icon={pinIcon}
+      icon={pinIcon(project.status)}
       eventHandlers={{ click: onOpen, popupclose: onClose }}
     >
       <Popup maxWidth={320} minWidth={280}>
@@ -99,7 +109,7 @@ function ProjectMarker({ project, isOpen, onOpen, onClose }: { project: any; isO
 function PopupContent({ project, isOpen }: { project: any; isOpen: boolean }) {
   const cameras = trpc.cameras.list.useQuery({ projectId: project.id }, { enabled: isOpen });
   const status = statusLabels[project.status] ?? project.status;
-  const statusColor = statusColors[project.status] ?? "bg-muted";
+  const statusColor = statusBadgeColors[project.status] ?? "bg-muted";
 
   return (
     <div className="space-y-3 min-w-[260px]">
