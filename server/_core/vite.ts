@@ -2,10 +2,11 @@ import express, { type Express } from "express";
 import compression from "compression";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express) {
+  const { createServer: createViteServer } = await import("vite");
+  const configPath = path.resolve(process.cwd(), "vite.config.ts");
+  const viteConfig = (await import(configPath)).default;
   const baseConfig = typeof viteConfig === "function" ? viteConfig({ mode: "development", command: "serve" }) : viteConfig;
   const vite = await createViteServer({
     ...baseConfig,
