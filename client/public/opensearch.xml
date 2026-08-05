@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Freonn</ShortName>
+  <Description>Поиск по сайту Freonn (блог и материалы)</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="32" height="32" type="image/png">https://freonn.pro/favicon-32x32.png</Image>
+  <Url type="text/html" method="get" template="https://freonn.pro/blog?q={searchTerms}"/>
+</OpenSearchDescription>

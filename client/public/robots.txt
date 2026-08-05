@@ -1,0 +1,41 @@
+# robots.txt — freonn.pro
+# Updated: 2026-07-19
+# LLMs.txt: https://freonn.pro/llms.txt
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /api/trpc/
+Disallow: /health
+Disallow: /404
+
+# Sitemap locations
+Sitemap: https://freonn.pro/sitemap.xml
+Sitemap: https://freonn.pro/turbo.xml
+Sitemap: https://freonn.pro/turbo-geo.xml
+Sitemap: https://freonn.pro/turbo-blog.xml
+
+# Яндекс (основной робот и вариант имени агента)
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /api/trpc/
+Disallow: /health
+Disallow: /404
+Host: freonn.pro
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&gclid&fbclid&etext&ybaip&p
+
+User-agent: YandexBot
+Allow: /
+Disallow: /api/
+Disallow: /api/trpc/
+Disallow: /health
+Disallow: /404
+
+# Google: без задержки
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /api/trpc/
+Disallow: /health
+Disallow: /404
