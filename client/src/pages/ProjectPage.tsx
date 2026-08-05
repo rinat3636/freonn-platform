@@ -167,14 +167,14 @@ export default function ProjectPage() {
   const utils = trpc.useUtils();
 
   const project = trpc.projects.get.useQuery({ id: projectId }, { enabled: !!projectId });
-  const stages = trpc.stages.list.useQuery({ projectId }, { enabled: activeTab === "stages" });
-  const media = trpc.content.mediaList.useQuery({ projectId }, { enabled: activeTab === "media" });
-  const docs = trpc.content.documentsList.useQuery({ projectId }, { enabled: activeTab === "docs" });
-  const workLogs = trpc.content.workLogsList.useQuery({ projectId }, { enabled: activeTab === "logs" });
-  const cams = trpc.cameras.list.useQuery({ projectId }, { enabled: activeTab === "cameras" });
-  const chat = trpc.content.chatList.useQuery({ projectId }, { enabled: activeTab === "chat" });
-  const activity = trpc.content.activityList.useQuery({ projectId }, { enabled: activeTab === "activity" });
-  const aiReports = trpc.content.aiReportsList.useQuery({ projectId }, { enabled: activeTab === "ai" });
+  const stages = trpc.stages.list.useQuery({ projectId }, { enabled: !!projectId && activeTab === "stages" });
+  const media = trpc.content.mediaList.useQuery({ projectId }, { enabled: !!projectId && activeTab === "media" });
+  const docs = trpc.content.documentsList.useQuery({ projectId }, { enabled: !!projectId && activeTab === "docs" });
+  const workLogs = trpc.content.workLogsList.useQuery({ projectId }, { enabled: !!projectId && activeTab === "logs" });
+  const cams = trpc.cameras.list.useQuery({ projectId }, { enabled: !!projectId && activeTab === "cameras" });
+  const chat = trpc.content.chatList.useQuery({ projectId }, { enabled: !!projectId && activeTab === "chat" });
+  const activity = trpc.content.activityList.useQuery({ projectId }, { enabled: !!projectId && activeTab === "activity" });
+  const aiReports = trpc.content.aiReportsList.useQuery({ projectId }, { enabled: !!projectId && activeTab === "ai" });
 
   const canEdit = user?.role === "director" || user?.role === "foreman";
   const isDirector = user?.role === "director";
