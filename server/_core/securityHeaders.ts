@@ -37,7 +37,6 @@ function csp(): string {
     `base-uri 'self'`,
     `form-action 'self'`,
     `frame-ancestors 'self'`,
-    "upgrade-insecure-requests",
   ].join("; ");
 }
 
@@ -52,9 +51,6 @@ export function applySecurityHeaders(app: Express): void {
       "Permissions-Policy",
       "accelerometer=(), camera=(), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
     );
-    if (process.env.NODE_ENV === "production") {
-      res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
-    }
     next();
   });
 }
