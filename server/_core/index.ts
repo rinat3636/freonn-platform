@@ -69,6 +69,14 @@ async function startServer() {
 
   applySecurityHeaders(app);
 
+  // Disable HTTP keep-alive to avoid stale connections when combined with
+  // streaming middleware on this low-bandwidth host. Each request gets a fresh
+  // TCP connection, which matches how standalone `curl` clients succeed.
+  app.use((_req, res, next) => {
+    res.setHeader("Connection", "close");
+    next();
+  });
+
   const sendHealth = (_req: express.Request, res: express.Response) => {
     res.setHeader("Cache-Control", "no-store");
     res.json({ ok: true, env: process.env.NODE_ENV || "development" });

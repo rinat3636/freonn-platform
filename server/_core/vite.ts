@@ -47,7 +47,7 @@ export function serveStatic(app: Express) {
     console.error(`Could not find the build directory: ${distPath}, make sure to build the client first`);
   }
 
-  app.use(compression());
+  app.use(compression({ threshold: 1024 }));
 
   const assetsPath = path.resolve(distPath, "assets");
   const corsStatic = { setHeaders: (res: express.Response) => res.setHeader("Access-Control-Allow-Origin", "*") };
