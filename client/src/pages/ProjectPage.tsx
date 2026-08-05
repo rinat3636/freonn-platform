@@ -218,14 +218,14 @@ export default function ProjectPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-wrap h-auto gap-1 mb-4 p-1 bg-muted/50 rounded-xl">
-          <TabTrigger value="stages" icon={CheckCircle2} label="Этапы" />
-          <TabTrigger value="media" icon={ImageIcon} label="Медиа" />
-          <TabTrigger value="docs" icon={FileText} label="Документы" />
-          <TabTrigger value="logs" icon={HardHat} label="Журнал" />
-          <TabTrigger value="cameras" icon={Camera} label="Камеры" />
-          <TabTrigger value="chat" icon={MessageSquare} label="Чат" />
-          <TabTrigger value="activity" icon={Activity} label="История" />
-          <TabTrigger value="ai" icon={Cpu} label="AI" />
+          <TabTrigger value="stages" icon={CheckCircle2} label="Этапы" onSelect={setActiveTab} />
+          <TabTrigger value="media" icon={ImageIcon} label="Медиа" onSelect={setActiveTab} />
+          <TabTrigger value="docs" icon={FileText} label="Документы" onSelect={setActiveTab} />
+          <TabTrigger value="logs" icon={HardHat} label="Журнал" onSelect={setActiveTab} />
+          <TabTrigger value="cameras" icon={Camera} label="Камеры" onSelect={setActiveTab} />
+          <TabTrigger value="chat" icon={MessageSquare} label="Чат" onSelect={setActiveTab} />
+          <TabTrigger value="activity" icon={Activity} label="История" onSelect={setActiveTab} />
+          <TabTrigger value="ai" icon={Cpu} label="AI" onSelect={setActiveTab} />
         </TabsList>
 
         <TabsContent value="stages">
@@ -257,9 +257,9 @@ export default function ProjectPage() {
   );
 }
 
-function TabTrigger({ value, icon: Icon, label }: { value: string; icon: any; label: string }) {
+function TabTrigger({ value, icon: Icon, label, onSelect }: { value: string; icon: any; label: string; onSelect?: (v: string) => void }) {
   return (
-    <TabsTrigger value={value} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-2">
+    <TabsTrigger value={value} onClick={() => onSelect?.(value)} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg px-3 py-2 text-sm gap-2">
       <Icon className="h-4 w-4" />
       <span className="hidden sm:inline">{label}</span>
     </TabsTrigger>

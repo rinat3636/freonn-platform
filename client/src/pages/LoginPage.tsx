@@ -66,8 +66,8 @@ export default function LoginPage() {
           <CardContent>
             <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Вход</TabsTrigger>
-                <TabsTrigger value="register">Регистрация</TabsTrigger>
+                <TabsTrigger value="login" onClick={() => setTab("login")}>Вход</TabsTrigger>
+                <TabsTrigger value="register" onClick={() => setTab("register")}>Регистрация</TabsTrigger>
               </TabsList>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
