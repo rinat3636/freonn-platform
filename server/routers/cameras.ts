@@ -26,8 +26,29 @@ function getStreamPath(camera: Camera): string {
 }
 
 function getHlsUrl(camera: Camera): string {
-  const base = ENV.go2rtcApiUrl.replace(/\/$/, "");
+  const base = ENV.go2rtcPublicUrl.replace(/\/$/, "");
   return `${base}/${getStreamPath(camera)}/index.m3u8`;
+}
+
+async function syncCameraToGo2rtc(camera: Camera) {
+  const path = getStreamPath(camera);
+  const base = ENV.go2rtcApiUrl.replace(/\/$/, "");
+  const url = `${base}/api/streams?src=${encodeURIComponent(camera.rtspUrl)}&name=${encodeURIComponent(path)}`;
+  try {
+    await fetch(url, { method: "PUT" });
+  } catch (e) {
+    console.warn("[go2rtc] failed to sync camera", camera.id, e);
+  }
+}
+
+async function removeCameraFromGo2rtc(camera: Camera) {
+  const path = getStreamPath(camera);
+  const base = ENV.go2rtcApiUrl.replace(/\/$/, "");
+  try {
+    await fetch(`${base}/api/streams?src=${encodeURIComponent(path)}`, { method: "DELETE" });
+  } catch (e) {
+    console.warn("[go2rtc] failed to remove camera", camera.id, e);
+  }
 }
 
 export const camerasRouter = router({
@@ -57,6 +78,7 @@ export const camerasRouter = router({
     });
     const cameraId = Number(result[0]?.insertId);
     const [created] = await db.select().from(cameras).where(eq(cameras.id, cameraId)).limit(1);
+    await syncCameraToGo2rtc(created);
     await logActivity(db, input.projectId, ctx.user.id, "CAMERA_ADDED", "camera", cameraId, { name: input.name });
     return { ...created, hlsUrl: getHlsUrl(created), streamPath: getStreamPath(created) };
   }),
@@ -75,6 +97,7 @@ export const camerasRouter = router({
     if (input.streamPath !== undefined) values.streamPath = input.streamPath;
     await db.update(cameras).set(values).where(eq(cameras.id, input.id));
     const [updated] = await db.select().from(cameras).where(eq(cameras.id, input.id)).limit(1);
+    await syncCameraToGo2rtc(updated);
     await logActivity(db, existing.projectId, ctx.user.id, "CAMERA_UPDATED", "camera", input.id, values as Record<string, unknown>);
     return { ...updated, hlsUrl: getHlsUrl(updated), streamPath: getStreamPath(updated) };
   }),
@@ -84,6 +107,7 @@ export const camerasRouter = router({
     const [existing] = await db.select().from(cameras).where(eq(cameras.id, input.id)).limit(1);
     if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Камера не найдена" });
     await requireProjectAccess(db, ctx.user, existing.projectId, "admin");
+    await removeCameraFromGo2rtc(existing);
     await db.delete(cameras).where(eq(cameras.id, input.id));
     await logActivity(db, existing.projectId, ctx.user.id, "CAMERA_DELETED", "camera", input.id);
     return { success: true };

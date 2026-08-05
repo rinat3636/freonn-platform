@@ -9,4 +9,5 @@ export const ENV = {
   uploadDir: process.env.UPLOAD_DIR ?? "uploads",
   appPublicUrl: process.env.APP_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3000}`,
   go2rtcApiUrl: process.env.GO2RTC_API_URL ?? "http://localhost:1984",
+  go2rtcPublicUrl: process.env.GO2RTC_PUBLIC_URL ?? (process.env.GO2RTC_API_URL ?? "http://localhost:1984"),
 };
