@@ -2,9 +2,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import FreonnLogo from "@/components/FreonnLogo";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
-import { Building2, LogOut, Menu, User, Bell, ChevronLeft, MapPin } from "lucide-react";
+import { LogOut, Menu, User, Bell, ChevronLeft, MapPin, Building2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -35,12 +36,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-background">
       <aside className={asideClass(mobileOpen)}>
-        <div className="flex h-16 items-center px-5 border-b gap-2">
-          <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
-            <Building2 className="h-5 w-5" />
-          </div>
+        <div className="flex h-16 items-center px-5 border-b gap-3">
+          <FreonnLogo height={34} showPro={false} />
           <div>
-            <div className="font-extrabold text-xl tracking-tight text-foreground leading-none">FREONN</div>
             <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</div>
           </div>
         </div>
@@ -98,10 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu className="h-5 w-5" />
             </Button>
             <div className="lg:hidden flex items-center gap-2">
-              <div className="h-7 w-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center">
-                <Building2 className="h-4 w-4" />
-              </div>
-              <span className="font-extrabold text-lg tracking-tight text-foreground">FREONN</span>
+              <FreonnLogo height={28} showPro={false} />
             </div>
           </div>
           <div className="flex items-center gap-2">

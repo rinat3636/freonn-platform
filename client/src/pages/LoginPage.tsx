@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import FreonnLogo from "@/components/FreonnLogo";
 
 export default function LoginPage() {
   const { setToken } = useAuth();
@@ -53,14 +54,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
       <div className="w-full max-w-md">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="h-12 w-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/25">
-            <Building2 className="h-7 w-7" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">FREONN</h1>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</p>
-          </div>
+        <div className="flex flex-col items-center justify-center gap-2 mb-8">
+          <FreonnLogo height={52} showPro={false} />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Platform</p>
         </div>
 
         <Card className="shadow-2xl border-0 overflow-hidden">
