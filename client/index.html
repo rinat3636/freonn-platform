@@ -12,6 +12,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="error-display" style="color:red;white-space:pre-wrap;font-family:monospace;padding:1rem"></div>
+    <script>
+      window.onerror = function(msg, src, line, col, err) {
+        document.getElementById('error-display').textContent += msg + ' at ' + src + ':' + line + '\n' + (err && err.stack ? err.stack : '') + '\n';
+      };
+      window.addEventListener('error', function(e) {
+        document.getElementById('error-display').textContent += e.message + '\n' + (e.error && e.error.stack ? e.error.stack : '') + '\n';
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
