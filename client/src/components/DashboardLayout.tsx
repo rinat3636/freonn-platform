@@ -1,11 +1,24 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import FreonnLogo from "@/components/FreonnLogo";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
-import { LogOut, Menu, User, Bell, ChevronLeft, MapPin, Building2 } from "lucide-react";
+import {
+  LogOut,
+  Menu,
+  User,
+  Bell,
+  ChevronLeft,
+  MapPin,
+  Building2,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -27,7 +40,11 @@ function mainClass(isMap: boolean) {
   return "flex-1 w-full p-4 md:p-6 max-w-7xl mx-auto";
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const isMap = location === "/map";
@@ -35,11 +52,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className={asideClass(mobileOpen)}>
+      <aside
+        className={asideClass(mobileOpen) + " bg-card/95 backdrop-blur-xl"}
+      >
         <div className="flex h-16 items-center px-5 border-b gap-3">
           <FreonnLogo height={34} showPro={false} />
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Platform
+            </div>
           </div>
         </div>
 
@@ -47,10 +68,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {nav.map(item => {
             const active = location === item.path;
             const Icon = item.icon;
-            const base = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all";
+            const base =
+              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all";
             const cls = active
               ? base + " bg-primary text-primary-foreground shadow-sm"
-              : base + " text-muted-foreground hover:bg-accent hover:text-foreground";
+              : base +
+                " text-muted-foreground hover:bg-accent hover:text-foreground";
             return (
               <Link key={item.path} href={item.path}>
                 <button onClick={() => setMobileOpen(false)} className={cls}>
@@ -72,9 +95,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate capitalize">{user?.role}</p>
+              <p className="text-xs text-muted-foreground truncate capitalize">
+                {user?.role}
+              </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={logout}
+              className="text-muted-foreground hover:text-destructive"
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -89,10 +119,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      <div className={isMap ? "flex-1 min-w-0 flex flex-col max-w-none" : "flex-1 min-w-0 flex flex-col"}>
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card/80 px-4 backdrop-blur-md lg:px-6 shadow-sm">
+      <div
+        className={
+          isMap
+            ? "flex-1 min-w-0 flex flex-col max-w-none"
+            : "flex-1 min-w-0 flex flex-col"
+        }
+      >
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border/60 bg-card/85 px-4 backdrop-blur-xl lg:px-6 shadow-sm">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setMobileOpen(true)}
+            >
               <Menu className="h-5 w-5" />
             </Button>
             <div className="lg:hidden flex items-center gap-2">
@@ -116,7 +157,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <User className="h-4 w-4" />
                   <span className="capitalize">{user?.role}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="text-destructive focus:text-destructive"
+                >
                   <LogOut className="h-4 w-4 mr-2" /> Выйти
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -129,7 +173,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-export function DashboardHeader({ title, children }: { title: string; children?: React.ReactNode }) {
+export function DashboardHeader({
+  title,
+  children,
+}: {
+  title: string;
+  children?: React.ReactNode;
+}) {
   const [location] = useLocation();
   const isProject = location.startsWith("/projects/");
 
@@ -137,15 +187,24 @@ export function DashboardHeader({ title, children }: { title: string; children?:
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
       <div className="flex items-center gap-3">
         {isProject && (
-          <Button variant="outline" size="icon" asChild className="rounded-full shrink-0">
+          <Button
+            variant="outline"
+            size="icon"
+            asChild
+            className="rounded-full shrink-0"
+          >
             <Link href="/">
               <ChevronLeft className="h-5 w-5" />
             </Link>
           </Button>
         )}
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{title}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          {title}
+        </h1>
       </div>
-      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
+      {children && (
+        <div className="flex items-center gap-2 flex-wrap">{children}</div>
+      )}
     </div>
   );
 }

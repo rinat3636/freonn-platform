@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, directorProcedure, router } from "../_core/trpc";
-import { projects, projectMembers, users } from "../../drizzle/schema";
+import { cameras, documents, media, projects, projectMembers, stages, users } from "../../drizzle/schema";
 import {
   createNotification,
   getAllowedProjectIds,
@@ -79,6 +79,66 @@ export const projectsRouter = router({
       customer: customer ? omitPassword(customer) : null,
       foreman: foreman ? omitPassword(foreman) : null,
       members: members.map(m => ({ ...m.user, role: m.role })),
+    };
+  }),
+
+  overview: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
+    const db = await getDbOrThrow();
+    await requireProjectAccess(db, ctx.user, input.id, "viewer");
+    const [project] = await db.select().from(projects).where(eq(projects.id, input.id)).limit(1);
+    if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "Объект не найден" });
+
+    const [director, customer, foreman, members, stagesRows] = await Promise.all([
+      db.select().from(users).where(eq(users.id, project.directorId)).limit(1).then(r => r[0] ?? null),
+      project.customerId ? db.select().from(users).where(eq(users.id, project.customerId)).limit(1).then(r => r[0] ?? null) : null,
+      project.primaryForemanId ? db.select().from(users).where(eq(users.id, project.primaryForemanId)).limit(1).then(r => r[0] ?? null) : null,
+      db
+        .select({ user: { id: users.id, name: users.name, email: users.email, role: users.role }, role: projectMembers.role })
+        .from(projectMembers)
+        .innerJoin(users, eq(projectMembers.userId, users.id))
+        .where(eq(projectMembers.projectId, input.id)),
+      db.select().from(stages).where(eq(stages.projectId, input.id)).orderBy(asc(stages.orderIndex)),
+    ]);
+
+    const [[photoCount], [videoCount], [documentCount], [cameraCount]] = await Promise.all([
+      db.select({ count: count() }).from(media).where(and(eq(media.projectId, input.id), eq(media.type, "photo"))),
+      db.select({ count: count() }).from(media).where(and(eq(media.projectId, input.id), eq(media.type, "video"))),
+      db.select({ count: count() }).from(documents).where(eq(documents.projectId, input.id)),
+      db.select({ count: count() }).from(cameras).where(eq(cameras.projectId, input.id)),
+    ]);
+
+    const now = new Date();
+    let risk: "on_track" | "at_risk" | "overdue" = "on_track";
+    if (project.plannedEndDate && now > project.plannedEndDate && project.status !== "completed") {
+      risk = "overdue";
+    } else if (project.startDate && project.plannedEndDate) {
+      const duration = project.plannedEndDate.getTime() - project.startDate.getTime();
+      if (duration > 0) {
+        const expected = Math.min(100, Math.max(0, ((now.getTime() - project.startDate.getTime()) / duration) * 100));
+        if (project.progressPercent - expected < -20) risk = "at_risk";
+      }
+    }
+
+    return {
+      ...project,
+      director: director ? omitPassword(director) : null,
+      customer: customer ? omitPassword(customer) : null,
+      foreman: foreman ? omitPassword(foreman) : null,
+      members: members.map(m => ({ ...m.user, role: m.role })),
+      counts: {
+        photos: Number(photoCount?.count ?? 0),
+        videos: Number(videoCount?.count ?? 0),
+        documents: Number(documentCount?.count ?? 0),
+        cameras: Number(cameraCount?.count ?? 0),
+        stagesTotal: stagesRows.length,
+        stagesDone: stagesRows.filter(stage => stage.status === "done").length,
+        stagesActive: stagesRows.filter(stage => stage.status === "active").length,
+      },
+      risk,
+      daysLeft: project.plannedEndDate
+        ? Math.ceil((project.plannedEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+      nextStage: stagesRows.find(stage => stage.status === "active") ?? stagesRows.find(stage => stage.status === "planned") ?? null,
     };
   }),
 

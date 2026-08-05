@@ -1,10 +1,22 @@
 import { z } from "zod";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, staffProcedure, router } from "../_core/trpc";
 import { media, documents, workLogs, chatMessages, notifications, activityLogs, aiReports, users } from "../../drizzle/schema";
 import { createNotification, getDbOrThrow, logActivity, omitPassword, requireProjectAccess, schema } from "./_shared";
-import { groqChat, GROQ_CONTENT_MODEL } from "../groq";
+import { groqChat, GROQ_CONTENT_MODEL, isGroqAvailable } from "../groq";
+
+type FeedItem = {
+  id: string;
+  kind: "worklog" | "photo" | "video" | "document" | "stage";
+  createdAt: Date;
+  title: string;
+  description?: string;
+  url?: string;
+  thumbnailUrl?: string;
+  authorName?: string | null;
+  meta?: Record<string, unknown>;
+};
 
 // ───────────────── Media ─────────────────
 const mediaInput = z.object({
@@ -59,6 +71,140 @@ const aiReportInput = z.object({
 });
 
 export const contentRouter = router({
+  feed: protectedProcedure
+    .input(z.object({ projectId: z.number().int(), limit: z.number().int().max(200).default(80) }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      await requireProjectAccess(db, ctx.user, input.projectId, "viewer");
+      const [workLogRows, mediaRows, documentRows, activityRows] = await Promise.all([
+        db.select().from(workLogs).where(eq(workLogs.projectId, input.projectId)).orderBy(desc(workLogs.createdAt)).limit(input.limit),
+        db.select().from(media).where(eq(media.projectId, input.projectId)).orderBy(desc(media.createdAt)).limit(input.limit),
+        db.select().from(documents).where(eq(documents.projectId, input.projectId)).orderBy(desc(documents.createdAt)).limit(input.limit),
+        db
+          .select()
+          .from(activityLogs)
+          .where(and(eq(activityLogs.projectId, input.projectId), eq(activityLogs.entityType, "stage")))
+          .orderBy(desc(activityLogs.createdAt))
+          .limit(input.limit),
+      ]);
+
+      const authorIds = Array.from(
+        new Set([
+          ...workLogRows.map(row => row.createdBy),
+          ...mediaRows.map(row => row.uploadedBy),
+          ...documentRows.map(row => row.uploadedBy),
+          ...activityRows.flatMap(row => (row.actorId ? [row.actorId] : [])),
+        ])
+      );
+      const authorRows = authorIds.length ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, authorIds)) : [];
+      const authorNames = new Map(authorRows.map(user => [user.id, user.name]));
+
+      const items: FeedItem[] = [
+        ...workLogRows.map(row => ({
+          id: `worklog-${row.id}`,
+          kind: "worklog" as const,
+          createdAt: row.createdAt,
+          title: "Запись в журнале работ",
+          description: row.description,
+          authorName: authorNames.get(row.createdBy) ?? null,
+          meta: { date: row.date, stageId: row.stageId, peopleCount: row.peopleCount, hours: row.hours },
+        })),
+        ...mediaRows.map(row => ({
+          id: `${row.type}-${row.id}`,
+          kind: row.type,
+          createdAt: row.createdAt,
+          title: row.originalName ?? (row.type === "photo" ? "Фотография" : "Видео"),
+          url: row.url,
+          thumbnailUrl: row.thumbnailUrl ?? undefined,
+          authorName: authorNames.get(row.uploadedBy) ?? null,
+          meta: { stageId: row.stageId, takenAt: row.takenAt },
+        })),
+        ...documentRows.map(row => ({
+          id: `document-${row.id}`,
+          kind: "document" as const,
+          createdAt: row.createdAt,
+          title: row.name,
+          url: row.url,
+          authorName: authorNames.get(row.uploadedBy) ?? null,
+          meta: { category: row.category, originalName: row.originalName },
+        })),
+        ...activityRows.map(row => ({
+          id: `stage-${row.id}`,
+          kind: "stage" as const,
+          createdAt: row.createdAt,
+          title: row.action === "STAGE_CREATED" ? "Создан этап" : "Обновлён этап",
+          description: row.action,
+          authorName: row.actorId ? authorNames.get(row.actorId) ?? null : null,
+          meta: { entityId: row.entityId, action: row.action, diff: row.diff },
+        })),
+      ];
+
+      return items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, input.limit);
+    }),
+
+  aiAsk: protectedProcedure
+    .input(z.object({ projectId: z.number().int(), question: z.string().min(1).max(2000) }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      await requireProjectAccess(db, ctx.user, input.projectId, "viewer");
+
+      const [[project], stageRows, logRows, documentRows, [photoCount], [videoCount], chatRows] = await Promise.all([
+        db.select().from(schema.projects).where(eq(schema.projects.id, input.projectId)).limit(1),
+        db.select().from(schema.stages).where(eq(schema.stages.projectId, input.projectId)).orderBy(asc(schema.stages.orderIndex)),
+        db.select().from(workLogs).where(eq(workLogs.projectId, input.projectId)).orderBy(desc(workLogs.date)).limit(15),
+        db.select().from(documents).where(eq(documents.projectId, input.projectId)).orderBy(desc(documents.createdAt)),
+        db.select({ count: count() }).from(media).where(and(eq(media.projectId, input.projectId), eq(media.type, "photo"))),
+        db.select({ count: count() }).from(media).where(and(eq(media.projectId, input.projectId), eq(media.type, "video"))),
+        db.select().from(chatMessages).where(eq(chatMessages.projectId, input.projectId)).orderBy(desc(chatMessages.createdAt)).limit(10),
+      ]);
+
+      const contextUserIds = Array.from(new Set([...logRows.map(row => row.createdBy), ...chatRows.map(row => row.senderId)]));
+      const contextUsers = contextUserIds.length
+        ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, contextUserIds))
+        : [];
+      const contextNames = new Map(contextUsers.map(user => [user.id, user.name]));
+      const projectName = project?.name ?? "—";
+      const context = [
+        "Данные объекта:",
+        `Название: ${projectName}`,
+        `Адрес: ${project?.address ?? "—"}`,
+        `Статус: ${project?.status ?? "—"}`,
+        `Прогресс: ${project?.progressPercent ?? 0}%`,
+        `Плановая дата окончания: ${project?.plannedEndDate?.toLocaleDateString("ru-RU") ?? "—"}`,
+        "Этапы:",
+        ...stageRows.map(stage => `- ${stage.name}: ${stage.status}, ${stage.progressPercent}%`),
+        "Последние записи журнала работ:",
+        ...logRows.map(log => `- ${log.date.toLocaleDateString("ru-RU")}: ${log.description}`),
+        "Документы:",
+        ...documentRows.map(document => `- ${document.name} (${document.category})`),
+        `Медиа: фотографий — ${Number(photoCount?.count ?? 0)}, видео — ${Number(videoCount?.count ?? 0)}`,
+        "Последние сообщения чата:",
+        ...chatRows
+          .slice()
+          .reverse()
+          .map(message => `- ${contextNames.get(message.senderId) ?? "Пользователь"}: ${message.content}`),
+        `Вопрос пользователя: ${input.question}`,
+      ].join("\n");
+
+      const answer = await groqChat(
+        [
+          {
+            role: "system",
+            content:
+              "Ты — ассистент строительной платформы Freonn. Ты помогаешь заказчику и прорабу понимать, что происходит на объекте. Отвечай на русском, кратко, по делу, опираясь только на предоставленные данные. Если данных недостаточно — честно скажи об этом.",
+          },
+          { role: "user", content: context },
+        ],
+        GROQ_CONTENT_MODEL,
+        1000
+      );
+
+      if (!answer || !isGroqAvailable()) {
+        return { answer: "AI временно недоступен (не настроен GROQ_API_KEY или сервис не отвечает).", available: false };
+      }
+      return { answer, available: true };
+    }),
+
   // ───────────────── Media ─────────────────
   mediaList: protectedProcedure.input(contentByProject).query(async ({ ctx, input }) => {
     const db = await getDbOrThrow();
