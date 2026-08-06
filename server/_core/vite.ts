@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import expressStaticGzip from "express-static-gzip";
 import fs from "fs";
 import path from "path";
+import { sendCachedHtml } from "./htmlCacheHeaders";
 
 export async function setupVite(app: Express) {
   const { createServer: createViteServer } = await import("vite");
@@ -49,8 +50,16 @@ export function serveStatic(app: Express) {
 
   const assetsPath = path.resolve(distPath, "assets");
   const staticOptions: any = {
-    setHeaders: (res: any) => {
+    setHeaders: (res: any, filePath: string) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
+      const fileName = path.basename(filePath);
+      if (
+        fileName.endsWith(".html") ||
+        fileName === "sw.js" ||
+        fileName === "site.webmanifest"
+      ) {
+        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+      }
     },
     index: false,
   };
@@ -65,7 +74,12 @@ export function serveStatic(app: Express) {
     try {
       const indexPath = path.resolve(distPath, "index.html");
       const html = loadIndexHtml(indexPath);
-      res.status(200).set({ "Content-Type": "text/html" }).send(html);
+      sendCachedHtml(res, req, {
+        status: 200,
+        html,
+        indexPath,
+        pathname: req.path,
+      });
     } catch (e) {
       console.error("SSR render error:", e);
       if (!res.headersSent) {
