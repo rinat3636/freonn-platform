@@ -7,6 +7,7 @@ import MapPage from "@/pages/MapPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import ProjectPage from "@/pages/ProjectPage";
 import UsersPage from "@/pages/UsersPage";
+import ProfilePage from "@/pages/ProfilePage";
 
 function AppRouter() {
   return (
@@ -16,6 +17,7 @@ function AppRouter() {
       <Route path="/map" component={MapPage} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/users" component={UsersPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/projects/:id" component={ProjectPage} />
       <Route
         component={() => (

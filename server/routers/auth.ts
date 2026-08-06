@@ -52,6 +52,12 @@ export const authRouter = router({
         message: "Неверный email или пароль",
       });
     }
+    if (!user.isActive) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Учётная запись отключена",
+      });
+    }
     const ok = await verifyPassword(input.password, user.passwordHash);
     if (!ok) {
       throw new TRPCError({
@@ -154,4 +160,157 @@ export const authRouter = router({
     const all = await db.select().from(users);
     return all.map(omitPassword);
   }),
+
+  updateProfile: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(2),
+        phone: z.string().max(20).nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      const values: Partial<typeof users.$inferInsert> = { name: input.name };
+      if (input.phone !== undefined) values.phone = input.phone;
+      await db.update(users).set(values).where(eq(users.id, ctx.user.id));
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, ctx.user.id))
+        .limit(1);
+      return omitPassword(user);
+    }),
+
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, ctx.user.id))
+        .limit(1);
+      if (!user || !(await verifyPassword(input.currentPassword, user.passwordHash))) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Текущий пароль указан неверно",
+        });
+      }
+      await db
+        .update(users)
+        .set({ passwordHash: await hashPassword(input.newPassword) })
+        .where(eq(users.id, ctx.user.id));
+      return { success: true };
+    }),
+
+  updateUser: directorProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        name: z.string().min(2),
+        phone: z.string().max(20).nullable().optional(),
+        role: z.enum(["director", "foreman", "customer"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      const [target] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, input.id))
+        .limit(1);
+      if (!target) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Пользователь не найден",
+        });
+      }
+      if (target.id === ctx.user.id && target.role !== input.role) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Нельзя изменить собственную роль",
+        });
+      }
+      await db
+        .update(users)
+        .set({ name: input.name, phone: input.phone, role: input.role })
+        .where(eq(users.id, input.id));
+      const [updated] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, input.id))
+        .limit(1);
+      return omitPassword(updated);
+    }),
+
+  setUserActive: directorProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        isActive: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.id === ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Нельзя отключить собственную учётную запись",
+        });
+      }
+      const db = await getDbOrThrow();
+      const [target] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, input.id))
+        .limit(1);
+      if (!target) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Пользователь не найден",
+        });
+      }
+      await db
+        .update(users)
+        .set({ isActive: input.isActive })
+        .where(eq(users.id, input.id));
+      return { success: true };
+    }),
+
+  resetUserPassword: directorProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        password: z.string().min(6),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.id === ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Собственный пароль можно изменить в профиле",
+        });
+      }
+      const db = await getDbOrThrow();
+      const [target] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, input.id))
+        .limit(1);
+      if (!target) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Пользователь не найден",
+        });
+      }
+      await db
+        .update(users)
+        .set({ passwordHash: await hashPassword(input.password) })
+        .where(eq(users.id, input.id));
+      return { success: true };
+    }),
 });

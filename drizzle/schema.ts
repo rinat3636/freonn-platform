@@ -8,6 +8,7 @@ export const users = mysqlTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
   role: mysqlEnum("role", ["director", "foreman", "customer"]).default("customer").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
