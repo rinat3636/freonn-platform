@@ -61,6 +61,7 @@ export default function ProjectPage() {
     { enabled: !!projectId }
   );
   const canEdit = user?.role === "director" || user?.role === "foreman";
+  const canDelete = user?.role === "director";
   if (!match || Number.isNaN(projectId))
     return (
       <div className="p-8 text-center text-muted-foreground">
@@ -106,13 +107,21 @@ export default function ProjectPage() {
             />
           </TabsContent>
           <TabsContent value="timeline">
-            <ConstructionTimeline projectId={projectId} canEdit={canEdit} />
+            <ConstructionTimeline
+              projectId={projectId}
+              canEdit={canEdit}
+              canDelete={canDelete}
+            />
           </TabsContent>
           <TabsContent value="feed">
             <ConstructionFeed projectId={projectId} canEdit={canEdit} />
           </TabsContent>
           <TabsContent value="photos">
-            <StagePhotos projectId={projectId} canEdit={canEdit} />
+            <StagePhotos
+              projectId={projectId}
+              canEdit={canEdit}
+              canDelete={canDelete}
+            />
           </TabsContent>
           <TabsContent value="cameras">
             <CamerasPanel projectId={projectId} canEdit={canEdit} />

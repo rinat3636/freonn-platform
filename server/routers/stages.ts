@@ -17,6 +17,7 @@ const stageInput = z.object({
 const stageUpdateInput = z.object({
   id: z.number().int(),
   name: z.string().min(2).optional(),
+  orderIndex: z.number().int().optional(),
   status: z.enum(["planned", "active", "done", "blocked"]).optional(),
   plannedStart: z.coerce.date().optional(),
   plannedEnd: z.coerce.date().optional(),
@@ -58,6 +59,7 @@ export const stagesRouter = router({
 
     const values: Partial<typeof input> = {};
     if (input.name !== undefined) values.name = input.name;
+    if (input.orderIndex !== undefined) values.orderIndex = input.orderIndex;
     if (input.plannedStart !== undefined) values.plannedStart = input.plannedStart;
     if (input.plannedEnd !== undefined) values.plannedEnd = input.plannedEnd;
     if (input.actualStart !== undefined) values.actualStart = input.actualStart;

@@ -1,7 +1,19 @@
-import { useState } from "react";
-import { Calendar, Check, Circle, Clock3, Plus, X } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Circle,
+  Clock3,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/lib/format";
+import { uploadFile } from "@/lib/upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +32,17 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const labels: Record<string, string> = {
@@ -35,30 +58,70 @@ const colors: Record<string, string> = {
   blocked: "bg-red-500",
 };
 
+function dateValue(value: Date | string | null | undefined) {
+  return value ? new Date(value).toISOString().slice(0, 10) : "";
+}
+
 export default function ConstructionTimeline({
   projectId,
   canEdit,
+  canDelete,
 }: {
   projectId: number;
   canEdit: boolean;
+  canDelete: boolean;
 }) {
   const stages = trpc.stages.list.useQuery({ projectId });
+  const reorder = trpc.stages.update.useMutation({
+    onError: e => toast.error(e.message),
+  });
   const [selected, setSelected] = useState<any>(null);
+  const [reordering, setReordering] = useState(false);
   const create = trpc.stages.create.useMutation({
     onSuccess: () => {
       stages.refetch();
+      setName("");
+      setPlannedStart("");
+      setPlannedEnd("");
       toast.success("Этап добавлен");
     },
     onError: e => toast.error(e.message),
   });
   const [name, setName] = useState("");
+  const [plannedStart, setPlannedStart] = useState("");
+  const [plannedEnd, setPlannedEnd] = useState("");
+
+  const swapStages = async (index: number, direction: -1 | 1) => {
+    const current = stages.data ?? [];
+    const adjacentIndex = index + direction;
+    const adjacent = current[adjacentIndex];
+    const stage = current[index];
+    if (!stage || !adjacent || reordering) return;
+    setReordering(true);
+    try {
+      await reorder.mutateAsync({
+        id: stage.id,
+        orderIndex: adjacent.orderIndex,
+      });
+      await reorder.mutateAsync({
+        id: adjacent.id,
+        orderIndex: stage.orderIndex,
+      });
+      await stages.refetch();
+    } catch {
+      // The mutation already surfaces its error through toast.
+    } finally {
+      setReordering(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {canEdit && (
         <Card className="rounded-2xl border border-border/50 shadow-sm">
           <CardContent className="p-4">
             <form
-              className="flex gap-2"
+              className="space-y-2"
               onSubmit={e => {
                 e.preventDefault();
                 if (!name.trim()) return;
@@ -66,23 +129,48 @@ export default function ConstructionTimeline({
                   projectId,
                   name: name.trim(),
                   orderIndex: stages.data?.length ?? 0,
+                  plannedStart: plannedStart
+                    ? new Date(plannedStart)
+                    : undefined,
+                  plannedEnd: plannedEnd ? new Date(plannedEnd) : undefined,
                 });
-                setName("");
               }}
             >
-              <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Добавить этап строительства"
-              />
-              <Button disabled={create.isPending}>
-                <Plus className="mr-2 h-4 w-4" /> Добавить
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+                <Input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Добавить этап строительства"
+                />
+                <Input
+                  type="date"
+                  aria-label="План: начало"
+                  title="План: начало"
+                  value={plannedStart}
+                  onChange={e => setPlannedStart(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  aria-label="План: окончание"
+                  title="План: окончание"
+                  value={plannedEnd}
+                  onChange={e => setPlannedEnd(e.target.value)}
+                />
+                <Button disabled={create.isPending}>
+                  <Plus className="mr-2 h-4 w-4" /> Добавить
+                </Button>
+              </div>
+              <div className="hidden text-xs text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:gap-2">
+                <span />
+                <span>План: начало</span>
+                <span>План: окончание</span>
+                <span />
+              </div>
             </form>
           </CardContent>
         </Card>
       )}
-      <Card className="rounded-2xl border border-border/50 shadow-sm overflow-hidden">
+      <Card className="overflow-hidden rounded-2xl border border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle>План строительства</CardTitle>
         </CardHeader>
@@ -115,6 +203,40 @@ export default function ConstructionTimeline({
                   <div className="mt-1 text-xs text-muted-foreground">
                     {stage.progressPercent}% · {labels[stage.status]}
                   </div>
+                  {canDelete && (
+                    <div className="relative z-20 mt-2 flex justify-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={index === 0 || reordering}
+                        onClick={e => {
+                          e.stopPropagation();
+                          swapStages(index, -1);
+                        }}
+                        aria-label="Переместить влево"
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={
+                          index === (stages.data?.length ?? 1) - 1 || reordering
+                        }
+                        onClick={e => {
+                          e.stopPropagation();
+                          swapStages(index, 1);
+                        }}
+                        aria-label="Переместить вправо"
+                      >
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -131,8 +253,14 @@ export default function ConstructionTimeline({
           stage={selected}
           projectId={projectId}
           canEdit={canEdit}
+          canDelete={canDelete}
           onClose={() => setSelected(null)}
           onUpdated={() => {
+            stages.refetch();
+            setSelected(null);
+          }}
+          onMediaUpdated={() => stages.refetch()}
+          onDeleted={() => {
             stages.refetch();
             setSelected(null);
           }}
@@ -142,7 +270,25 @@ export default function ConstructionTimeline({
   );
 }
 
-function StageDialog({ stage, projectId, canEdit, onClose, onUpdated }: any) {
+function StageDialog({
+  stage,
+  projectId,
+  canEdit,
+  canDelete,
+  onClose,
+  onUpdated,
+  onMediaUpdated,
+  onDeleted,
+}: {
+  stage: any;
+  projectId: number;
+  canEdit: boolean;
+  canDelete: boolean;
+  onClose: () => void;
+  onUpdated: () => void;
+  onMediaUpdated: () => void;
+  onDeleted: () => void;
+}) {
   const logs = trpc.content.workLogsList.useQuery({
     projectId,
     stageId: stage.id,
@@ -155,6 +301,27 @@ function StageDialog({ stage, projectId, canEdit, onClose, onUpdated }: any) {
     onSuccess: onUpdated,
     onError: e => toast.error(e.message),
   });
+  const remove = trpc.stages.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Этап удалён");
+      onDeleted();
+    },
+    onError: e => toast.error(e.message),
+  });
+  const createMedia = trpc.content.mediaCreate.useMutation({
+    onSuccess: () => {
+      media.refetch();
+      onMediaUpdated();
+      toast.success("Файл добавлен");
+    },
+    onError: e => toast.error(e.message),
+  });
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [plannedStart, setPlannedStart] = useState(
+    dateValue(stage.plannedStart)
+  );
+  const [plannedEnd, setPlannedEnd] = useState(dateValue(stage.plannedEnd));
+  const [uploading, setUploading] = useState(false);
   const duration =
     stage.actualStart && stage.actualEnd
       ? Math.ceil(
@@ -169,6 +336,30 @@ function StageDialog({ stage, projectId, canEdit, onClose, onUpdated }: any) {
               86400000
           )
         : null;
+
+  const onUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile(file);
+      await createMedia.mutateAsync({
+        projectId,
+        stageId: stage.id,
+        type: file.type.startsWith("video") ? "video" : "photo",
+        url,
+        originalName: file.name,
+        mimeType: file.type,
+        size: file.size,
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Не удалось загрузить файл");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
       <DialogContent className="max-w-2xl rounded-2xl">
@@ -185,20 +376,53 @@ function StageDialog({ stage, projectId, canEdit, onClose, onUpdated }: any) {
               </span>
             )}
           </div>
-          <div className="grid gap-2 text-sm text-muted-foreground">
-            <span className="flex gap-2">
-              <Calendar className="h-4 w-4" /> План:{" "}
-              {formatDate(stage.plannedStart)} — {formatDate(stage.plannedEnd)}
-            </span>
-            {stage.actualStart && (
-              <span>
-                Фактически: {formatDate(stage.actualStart)} —{" "}
-                {formatDate(stage.actualEnd)}
-              </span>
+          <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>План: начало</Label>
+              <Input
+                type="date"
+                value={plannedStart}
+                onChange={e => setPlannedStart(e.target.value)}
+                disabled={!canEdit}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>План: окончание</Label>
+              <Input
+                type="date"
+                value={plannedEnd}
+                onChange={e => setPlannedEnd(e.target.value)}
+                disabled={!canEdit}
+              />
+            </div>
+            {canEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                className="sm:col-span-2"
+                disabled={update.isPending}
+                onClick={() =>
+                  update.mutate({
+                    id: stage.id,
+                    plannedStart: plannedStart
+                      ? new Date(plannedStart)
+                      : undefined,
+                    plannedEnd: plannedEnd ? new Date(plannedEnd) : undefined,
+                  })
+                }
+              >
+                Сохранить план
+              </Button>
             )}
           </div>
+          {stage.actualStart && (
+            <span className="block text-sm text-muted-foreground">
+              Фактически: {formatDate(stage.actualStart)} —{" "}
+              {formatDate(stage.actualEnd)}
+            </span>
+          )}
           {canEdit && (
-            <div className="grid gap-3 sm:grid-cols-2 border-t pt-4">
+            <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
               <div>
                 <Label>Статус</Label>
                 <Select
@@ -235,6 +459,39 @@ function StageDialog({ stage, projectId, canEdit, onClose, onUpdated }: any) {
               </div>
             </div>
           )}
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full"
+                  disabled={remove.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Удалить этап
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Удалить этап?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Этап «{stage.name}» и связанные данные будут удалены.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={e => {
+                      e.preventDefault();
+                      remove.mutate({ id: stage.id });
+                    }}
+                  >
+                    Удалить
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           <div>
             <h3 className="mb-2 font-bold">Журнал работ</h3>
             {logs.data?.length ? (
@@ -256,16 +513,52 @@ function StageDialog({ stage, projectId, canEdit, onClose, onUpdated }: any) {
             )}
           </div>
           <div>
-            <h3 className="mb-2 font-bold">Медиа</h3>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="font-bold">Медиа</h3>
+              {canEdit && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={onUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-2 h-4 w-4" />
+                    )}
+                    Загрузить
+                  </Button>
+                </>
+              )}
+            </div>
             {media.data?.length ? (
               <div className="grid grid-cols-4 gap-2">
                 {media.data.map(item => (
-                  <img
-                    key={item.id}
-                    src={item.thumbnailUrl || item.url}
-                    className="aspect-square rounded-lg object-cover"
-                    alt=""
-                  />
+                  <div key={item.id} className="overflow-hidden rounded-lg">
+                    {item.type === "video" ? (
+                      <video
+                        src={item.url}
+                        controls
+                        className="aspect-square w-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={item.thumbnailUrl || item.url}
+                        className="aspect-square w-full object-cover"
+                        alt=""
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (

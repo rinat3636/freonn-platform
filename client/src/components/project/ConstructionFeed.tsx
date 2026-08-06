@@ -1,21 +1,31 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   CheckCircle2,
   FileText,
   HardHat,
   ImageIcon,
   Loader2,
+  Paperclip,
   Plus,
   Video,
+  X,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/lib/format";
+import { uploadFile } from "@/lib/upload";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 const icons: Record<string, any> = {
@@ -57,18 +67,19 @@ export default function ConstructionFeed({
   canEdit: boolean;
 }) {
   const feed = trpc.content.feed.useQuery({ projectId, limit: 120 });
-  const create = trpc.content.workLogCreate.useMutation({
-    onSuccess: () => {
-      feed.refetch();
-      setDescription("");
-      toast.success("Обновление добавлено");
-    },
-    onError: e => toast.error(e.message),
-  });
+  const stages = trpc.stages.list.useQuery({ projectId });
+  const utils = trpc.useUtils();
+  const create = trpc.content.workLogCreate.useMutation();
+  const mediaCreate = trpc.content.mediaCreate.useMutation();
   const [description, setDescription] = useState("");
   const [people, setPeople] = useState("");
   const [hours, setHours] = useState("");
+  const [stageId, setStageId] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [lightbox, setLightbox] = useState<any>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const groups = (feed.data ?? []).reduce<Record<string, any[]>>(
     (acc, item) => {
       const key = dayLabel(item.createdAt);
@@ -83,16 +94,62 @@ export default function ConstructionFeed({
         <Card className="rounded-2xl border border-border/50 shadow-sm">
           <CardContent className="p-5">
             <form
-              onSubmit={e => {
+              onSubmit={async e => {
                 e.preventDefault();
                 if (!description.trim()) return;
-                create.mutate({
-                  projectId,
-                  date: new Date(),
-                  description: description.trim(),
-                  peopleCount: people ? Number(people) : undefined,
-                  hours: hours ? Number(hours) : undefined,
-                });
+                setSubmitting(true);
+                setUploadProgress("");
+                try {
+                  await create.mutateAsync({
+                    projectId,
+                    stageId: stageId ? Number(stageId) : undefined,
+                    date: new Date(),
+                    description: description.trim(),
+                    peopleCount: people ? Number(people) : undefined,
+                    hours: hours ? Number(hours) : undefined,
+                  });
+                  const failures: string[] = [];
+                  for (let index = 0; index < files.length; index += 1) {
+                    const file = files[index];
+                    setUploadProgress(
+                      `Загрузка ${index + 1} из ${files.length}`
+                    );
+                    try {
+                      const url = await uploadFile(file);
+                      await mediaCreate.mutateAsync({
+                        projectId,
+                        stageId: stageId ? Number(stageId) : undefined,
+                        type: file.type.startsWith("video") ? "video" : "photo",
+                        url,
+                        originalName: file.name,
+                        mimeType: file.type,
+                        size: file.size,
+                      });
+                    } catch {
+                      failures.push(file.name);
+                    }
+                  }
+                  await utils.content.feed.invalidate({ projectId });
+                  await utils.content.mediaList.invalidate({ projectId });
+                  setDescription("");
+                  setPeople("");
+                  setHours("");
+                  setStageId("");
+                  setFiles([]);
+                  if (fileRef.current) fileRef.current.value = "";
+                  if (failures.length) {
+                    toast.error(`Не загружены: ${failures.join(", ")}`);
+                  } else {
+                    toast.success("Обновление добавлено");
+                  }
+                } catch (error: any) {
+                  toast.error(
+                    error.message || "Не удалось добавить обновление"
+                  );
+                } finally {
+                  setUploadProgress("");
+                  setSubmitting(false);
+                }
               }}
               className="space-y-3"
             >
@@ -102,6 +159,74 @@ export default function ConstructionFeed({
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Что сделано сегодня?"
               />
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <Select
+                  value={stageId || "__none"}
+                  onValueChange={value =>
+                    setStageId(value === "__none" ? "" : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Этап не выбран" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Этап не выбран</SelectItem>
+                    {(stages.data ?? []).map(stage => (
+                      <SelectItem key={stage.id} value={String(stage.id)}>
+                        {stage.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={e => {
+                    setFiles(current => [
+                      ...current,
+                      ...Array.from(e.target.files ?? []),
+                    ]);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={submitting}
+                >
+                  <Paperclip className="mr-2 h-4 w-4" /> Фото и видео
+                </Button>
+              </div>
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {files.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="flex max-w-full items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs"
+                    >
+                      <span className="max-w-48 truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        className="rounded-full p-0.5 hover:bg-background"
+                        onClick={() =>
+                          setFiles(current =>
+                            current.filter(
+                              (_, fileIndex) => fileIndex !== index
+                            )
+                          )
+                        }
+                        aria-label={`Удалить ${file.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Input
                   className="w-28"
@@ -117,14 +242,19 @@ export default function ConstructionFeed({
                   value={hours}
                   onChange={e => setHours(e.target.value)}
                 />
-                <Button disabled={create.isPending}>
-                  {create.isPending ? (
+                <Button disabled={create.isPending || submitting}>
+                  {submitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Plus className="mr-2 h-4 w-4" />
                   )}
                   Добавить
                 </Button>
+                {uploadProgress && (
+                  <span className="self-center text-xs text-muted-foreground">
+                    {uploadProgress}
+                  </span>
+                )}
               </div>
             </form>
           </CardContent>
