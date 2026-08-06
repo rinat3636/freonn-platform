@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import LoginPage from "@/pages/LoginPage";
 import { PwaSplash } from "@/components/PwaSplash";
@@ -12,6 +12,8 @@ const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 const ProjectPage = lazy(() => import("@/pages/ProjectPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 
 function PageLoader() {
   return (
@@ -26,6 +28,8 @@ function AppRouter() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/login" component={LoginPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/" component={DashboardPage} />
         <Route path="/map" component={MapPage} />
         <Route path="/notifications" component={NotificationsPage} />
@@ -44,6 +48,7 @@ function AppRouter() {
 
 export default function App({ onReady }: { onReady?: () => void }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
 
   useEffect(() => {
     if (!isLoading) {
@@ -55,8 +60,17 @@ export default function App({ onReady }: { onReady?: () => void }) {
     return <PwaSplash />;
   }
 
-  if (!isAuthenticated) {
+  const publicPaths = ["/login", "/forgot-password", "/reset-password"];
+  const isPublic = publicPaths.some(
+    path => location === path || location.startsWith(`${path}?`)
+  );
+
+  if (!isAuthenticated && !isPublic) {
     return <LoginPage />;
+  }
+
+  if (!isAuthenticated) {
+    return <AppRouter />;
   }
 
   return (

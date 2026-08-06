@@ -260,6 +260,22 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   project: one(projects, { fields: [notifications.projectId], references: [projects.id] }),
 }));
 
+export const passwordResetTokens = mysqlTable("passwordResetTokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, t => [
+  index("resetTokenIdx").on(t.token),
+  index("resetUserIdx").on(t.userId),
+]);
+
+export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
+  user: one(users, { fields: [passwordResetTokens.userId], references: [users.id] }),
+}));
+
 export const activityLogs = mysqlTable("activityLogs", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),

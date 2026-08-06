@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +100,14 @@ export default function LoginPage() {
                 </TabsTrigger>
               </TabsList>
               <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    Забыли пароль?
+                  </Link>
+                </div>
                 <TabsContent value="login" className="mt-0 space-y-4">
                   <LoginFields />
                 </TabsContent>

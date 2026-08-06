@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { eq, count } from "drizzle-orm";
+import { eq, count, and, gt, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { randomBytes } from "node:crypto";
 import {
   publicProcedure,
   protectedProcedure,
@@ -14,8 +15,9 @@ import {
   setSessionCookie,
   clearSessionCookie,
 } from "../_core/auth";
+import { sendPasswordResetEmail } from "../_core/mailer";
 import { getDbOrThrow, omitPassword } from "./_shared";
-import { users } from "../../drizzle/schema";
+import { users, passwordResetTokens } from "../../drizzle/schema";
 
 const loginInput = z.object({
   email: z.string().email(),
@@ -319,6 +321,66 @@ export const authRouter = router({
         .update(users)
         .set({ passwordHash: await hashPassword(input.password) })
         .where(eq(users.id, input.id));
+      return { success: true };
+    }),
+
+  forgotPassword: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const db = await getDbOrThrow();
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1);
+      if (!user) {
+        return { success: true };
+      }
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      await db.insert(passwordResetTokens).values({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+      await sendPasswordResetEmail(user.email, token);
+      return { success: true };
+    }),
+
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDbOrThrow();
+      const [row] = await db
+        .select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.token, input.token),
+            gt(passwordResetTokens.expiresAt, new Date()),
+            isNull(passwordResetTokens.usedAt)
+          )
+        )
+        .limit(1);
+      if (!row) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ссылка сброса пароля недействительна или истекла",
+        });
+      }
+      await db
+        .update(users)
+        .set({ passwordHash: await hashPassword(input.newPassword) })
+        .where(eq(users.id, row.userId));
+      await db
+        .update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResetTokens.id, row.id));
       return { success: true };
     }),
 });
