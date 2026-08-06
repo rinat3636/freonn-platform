@@ -40,20 +40,26 @@ createRoot(document.getElementById("root")!).render(
   </trpc.Provider>
 );
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .getRegistrations()
-    .then(async (regs) => {
-      let removed = false;
-      for (const reg of regs) {
-        await reg.unregister();
-        removed = true;
+async function clearStaleServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    if (regs.length > 0) {
+      // Remove the old SW and wipe its caches so the next load uses the fresh shell.
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((name) => caches.delete(name)));
+      } catch {
+        /* ignore cache cleanup errors */
       }
-      if (removed) {
-        window.location.reload();
-        return;
-      }
-      return navigator.serviceWorker.register("/sw.js");
-    })
-    .catch(console.error);
+      await Promise.all(regs.map((reg) => reg.unregister()));
+      window.location.href = "/";
+      return;
+    }
+    await navigator.serviceWorker.register("/sw.js");
+  } catch (e) {
+    console.error("Service worker setup failed", e);
+  }
 }
+
+clearStaleServiceWorker();

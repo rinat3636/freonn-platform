@@ -58,7 +58,12 @@ export function serveStatic(app: Express) {
         fileName === "sw.js" ||
         fileName === "site.webmanifest"
       ) {
-        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+        // Never cache the shell or service worker so updates are picked up
+        // immediately after each deploy.
+        res.setHeader(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, max-age=0"
+        );
       }
     },
     index: false,
