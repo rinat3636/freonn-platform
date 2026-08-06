@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Sparkles,
   Timer,
+  Users,
   Video,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,7 @@ import CamerasPanel from "@/components/project/CamerasPanel";
 import ProjectDocuments from "@/components/project/ProjectDocuments";
 import ProjectChat from "@/components/project/ProjectChat";
 import AIAssistant from "@/components/project/AIAssistant";
+import ProjectTeam from "@/components/project/ProjectTeam";
 
 const tabs = [
   { value: "overview", label: "Обзор", icon: Sparkles },
@@ -33,6 +35,7 @@ const tabs = [
   { value: "cameras", label: "Камеры", icon: Camera },
   { value: "documents", label: "Документы", icon: FileText },
   { value: "chat", label: "Чат", icon: MessageSquare },
+  { value: "team", label: "Команда", icon: Users },
   { value: "ai", label: "AI", icon: Cpu },
 ];
 const statusLabels: Record<string, string> = {
@@ -130,6 +133,12 @@ export default function ProjectPage() {
         </TabsContent>
         <TabsContent value="chat">
           <ProjectChat projectId={projectId} />
+        </TabsContent>
+        <TabsContent value="team">
+          <ProjectTeam
+            projectId={projectId}
+            canManage={user?.role === "director"}
+          />
         </TabsContent>
         <TabsContent value="ai">
           <AIAssistant projectId={projectId} />

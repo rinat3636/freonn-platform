@@ -6,6 +6,7 @@ import LoginPage from "@/pages/LoginPage";
 import MapPage from "@/pages/MapPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import ProjectPage from "@/pages/ProjectPage";
+import UsersPage from "@/pages/UsersPage";
 
 function AppRouter() {
   return (
@@ -14,8 +15,13 @@ function AppRouter() {
       <Route path="/" component={DashboardPage} />
       <Route path="/map" component={MapPage} />
       <Route path="/notifications" component={NotificationsPage} />
+      <Route path="/users" component={UsersPage} />
       <Route path="/projects/:id" component={ProjectPage} />
-      <Route component={() => <div className="p-8 text-center">Страница не найдена</div>} />
+      <Route
+        component={() => (
+          <div className="p-8 text-center">Страница не найдена</div>
+        )}
+      />
     </Switch>
   );
 }

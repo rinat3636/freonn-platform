@@ -15,6 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Calendar,
   MapPin,
@@ -86,6 +93,8 @@ export default function DashboardPage() {
       setAddress("");
       setPlannedEndDate("");
       setCoords(null);
+      setCustomerId("");
+      setForemanId("");
       toast.success("Объект создан");
     },
     onError: e => toast.error(e.message),
@@ -94,6 +103,8 @@ export default function DashboardPage() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [plannedEndDate, setPlannedEndDate] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [foremanId, setForemanId] = useState("");
   const [search, setSearch] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null
@@ -107,6 +118,11 @@ export default function DashboardPage() {
       refetchOnWindowFocus: false,
     }
   );
+  const users = trpc.auth.listUsers.useQuery(undefined, {
+    enabled: isDirector,
+  });
+  const customers = users.data?.filter(user => user.role === "customer") ?? [];
+  const foremen = users.data?.filter(user => user.role === "foreman") ?? [];
 
   const onCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +133,8 @@ export default function DashboardPage() {
       plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : undefined,
       lat: coords?.lat,
       lng: coords?.lng,
+      customerId: customerId ? Number(customerId) : undefined,
+      primaryForemanId: foremanId ? Number(foremanId) : undefined,
     });
   };
 
@@ -209,6 +227,56 @@ export default function DashboardPage() {
                     value={plannedEndDate}
                     onChange={e => setPlannedEndDate(e.target.value)}
                   />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Заказчик</Label>
+                    <Select
+                      value={customerId || "__none"}
+                      onValueChange={value =>
+                        setCustomerId(value === "__none" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Не назначен" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">Не назначен</SelectItem>
+                        {customers.map(customer => (
+                          <SelectItem
+                            key={customer.id}
+                            value={String(customer.id)}
+                          >
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Прораб</Label>
+                    <Select
+                      value={foremanId || "__none"}
+                      onValueChange={value =>
+                        setForemanId(value === "__none" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Не назначен" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">Не назначен</SelectItem>
+                        {foremen.map(foreman => (
+                          <SelectItem
+                            key={foreman.id}
+                            value={String(foreman.id)}
+                          >
+                            {foreman.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <Button
                   type="submit"
