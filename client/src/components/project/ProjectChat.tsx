@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Check,
   FileText,
   Loader2,
   MessageSquare,
@@ -18,7 +19,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+type ChatMessageData = {
+  id: number;
+  senderId: number;
+  type: "text" | "photo" | "document" | "system";
+  content: string;
+  attachmentUrl?: string | null;
+  readBy?: unknown;
+  createdAt: Date | string;
+  sender?: { id: number; name: string } | null;
+};
+
+type ChatParticipant = {
+  id: number;
+  name: string;
+  role: string;
+};
+
+const roleLabels: Record<string, string> = {
+  director: "директор",
+  foreman: "прораб",
+  customer: "заказчик",
+  viewer: "участник",
+  admin: "администратор",
+};
 
 function initials(name?: string | null) {
   return (
@@ -70,20 +96,76 @@ function attachmentName(url: string, fallback?: string | null) {
   }
 }
 
-export default function ProjectChat({ projectId }: { projectId: number }) {
+function hasReadByOther(message: ChatMessageData, userId?: number) {
+  if (!userId || !Array.isArray(message.readBy)) return false;
+  return message.readBy.some(
+    readerId => typeof readerId === "number" && readerId !== userId
+  );
+}
+
+export default function ProjectChat({
+  projectId,
+  projectName,
+  participants,
+  isActive,
+}: {
+  projectId: number;
+  projectName: string;
+  participants: ChatParticipant[];
+  isActive: boolean;
+}) {
   const { user } = useAuth();
-  const messages = trpc.content.chatList.useQuery({ projectId });
+  const [isVisible, setIsVisible] = useState(() => !document.hidden);
+  const messages = trpc.content.chatList.useQuery(
+    { projectId },
+    {
+      enabled: isActive,
+      refetchInterval: isActive && isVisible ? 3000 : false,
+      refetchIntervalInBackground: false,
+    }
+  );
+  const utils = trpc.useUtils();
   const send = trpc.content.chatSend.useMutation({
-    onSuccess: () => messages.refetch(),
+    onSuccess: () => utils.content.chatList.invalidate({ projectId }),
     onError: error => toast.error(error.message),
   });
+  const markRead = trpc.content.chatMarkRead.useMutation();
   const [text, setText] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
+  const markedReadRef = useRef(new Set<number>());
 
   useEffect(() => {
+    const handleVisibility = () => setIsVisible(!document.hidden);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 96)}px`;
+  }, [text]);
+
+  useEffect(() => {
+    if (!messages.data?.length) return;
+    const unreadIds = messages.data
+      .filter(message => message.sender?.id !== user?.id)
+      .map(message => message.id)
+      .filter(id => !markedReadRef.current.has(id));
+    if (!unreadIds.length) return;
+    unreadIds.forEach(id => markedReadRef.current.add(id));
+    markRead.mutate({ projectId, messageIds: unreadIds });
+  }, [messages.data, markRead, projectId, user?.id]);
+
+  useEffect(() => {
+    if (!messages.data?.length || !nearBottomRef.current) return;
     messagesRef.current?.scrollTo({
       top: messagesRef.current.scrollHeight,
       behavior: "smooth",
@@ -96,14 +178,16 @@ export default function ProjectChat({ projectId }: { projectId: number }) {
       | {
           type: "message";
           key: string;
-          message: any;
+          message: ChatMessageData;
           grouped: boolean;
+          showTime: boolean;
         }
     > = [];
+    const list = messages.data ?? [];
     let previousDay = "";
     let previousSender: number | null = null;
 
-    for (const message of messages.data ?? []) {
+    list.forEach((message, index) => {
       const day = new Date(message.createdAt).toDateString();
       if (day !== previousDay) {
         result.push({
@@ -115,51 +199,103 @@ export default function ProjectChat({ projectId }: { projectId: number }) {
         previousSender = null;
       }
       const senderId = message.sender?.id ?? null;
+      const next = list[index + 1];
+      const nextDay = next
+        ? new Date(next.createdAt).toDateString()
+        : undefined;
+      const showTime = !next || nextDay !== day || next.sender?.id !== senderId;
       result.push({
         type: "message",
         key: `message-${message.id}`,
         message,
         grouped: senderId !== null && senderId === previousSender,
+        showTime,
       });
       previousSender = senderId;
-    }
+    });
     return result;
   }, [messages.data]);
 
   const sendText = () => {
     const content = text.trim();
-    if (!content || send.isPending || uploading) return;
+    if (!content || send.isPending || uploadingFiles.length) return;
+    nearBottomRef.current = true;
     send.mutate({ projectId, content, type: "text" });
     setText("");
   };
 
-  const handleFile = async (file?: File) => {
-    if (!file || uploading) return;
-    setUploading(true);
+  const handleFiles = async (files: File[]) => {
+    const accepted = files.filter(file => file.size > 0);
+    if (!accepted.length || uploadingFiles.length) return;
+    setUploadingFiles(accepted.map(file => file.name));
     try {
-      const url = await uploadFile(file);
-      const isImage = file.type.startsWith("image/");
-      const isVideo = file.type.startsWith("video/");
-      await send.mutateAsync({
-        projectId,
-        type: isImage || isVideo ? "photo" : "document",
-        content: isImage || isVideo ? "" : file.name,
-        attachmentUrl: url,
-      });
+      for (const file of accepted) {
+        const url = await uploadFile(file);
+        const isImage = file.type.startsWith("image/");
+        const isVideo = file.type.startsWith("video/");
+        await send.mutateAsync({
+          projectId,
+          type: isImage || isVideo ? "photo" : "document",
+          content: isImage || isVideo ? "" : file.name,
+          attachmentUrl: url,
+        });
+      }
+      nearBottomRef.current = true;
+      await utils.content.chatList.invalidate({ projectId });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Ошибка загрузки");
     } finally {
-      setUploading(false);
+      setUploadingFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const image = Array.from(event.clipboardData.items)
+      .find(item => item.type.startsWith("image/"))
+      ?.getAsFile();
+    if (!image) return;
+    event.preventDefault();
+    void handleFiles([image]);
   };
 
   return (
     <>
       <div className="flex h-[68vh] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
+        <div className="border-b border-border/60 bg-card px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarFallback className="bg-primary/10 text-primary">
+                <MessageSquare className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{projectName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {participants
+                  .map(
+                    participant =>
+                      `${participant.name} · ${roleLabels[participant.role] || participant.role}`
+                  )
+                  .join(", ")}
+              </p>
+            </div>
+          </div>
+        </div>
         <div
           ref={messagesRef}
           className="flex-1 space-y-1 overflow-y-auto bg-muted/30 p-4"
+          onScroll={event => {
+            const element = event.currentTarget;
+            nearBottomRef.current =
+              element.scrollHeight - element.scrollTop - element.clientHeight <
+              96;
+          }}
+          onDragOver={event => event.preventDefault()}
+          onDrop={event => {
+            event.preventDefault();
+            void handleFiles(Array.from(event.dataTransfer.files));
+          }}
         >
           {entries.map(entry =>
             entry.type === "day" ? (
@@ -173,7 +309,9 @@ export default function ProjectChat({ projectId }: { projectId: number }) {
                 key={entry.key}
                 message={entry.message}
                 grouped={entry.grouped}
+                showTime={entry.showTime}
                 own={entry.message.sender?.id === user?.id}
+                read={hasReadByOther(entry.message, user?.id)}
                 onPreview={setPreviewUrl}
               />
             )
@@ -196,43 +334,71 @@ export default function ProjectChat({ projectId }: { projectId: number }) {
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,*/*"
-            onChange={event => handleFile(event.target.files?.[0])}
+            onChange={event =>
+              void handleFiles(Array.from(event.target.files ?? []))
+            }
           />
-          <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-background p-1.5">
+          <div className="flex items-end gap-2 rounded-2xl border border-border/60 bg-background p-1.5">
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="shrink-0 rounded-xl text-muted-foreground"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading || send.isPending}
+              disabled={Boolean(uploadingFiles.length) || send.isPending}
               aria-label="Прикрепить файл"
             >
-              {uploading ? (
+              {uploadingFiles.length ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Paperclip className="h-4 w-4" />
               )}
             </Button>
-            <Input
+            <Textarea
+              ref={textareaRef}
               value={text}
+              rows={1}
               onChange={event => setText(event.target.value)}
+              onPaste={handlePaste}
+              onKeyDown={event => {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  sendText();
+                }
+              }}
               placeholder="Сообщение…"
-              className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
-              disabled={uploading}
+              className="max-h-24 min-h-10 resize-none border-0 bg-transparent py-2.5 shadow-none focus-visible:ring-0"
+              disabled={Boolean(uploadingFiles.length)}
             />
             <Button
               type="submit"
               size="icon"
               className="shrink-0 rounded-xl"
-              disabled={!text.trim() || uploading || send.isPending}
+              disabled={
+                !text.trim() || uploadingFiles.length > 0 || send.isPending
+              }
               aria-label="Отправить"
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
+          {uploadingFiles.length > 0 && (
+            <p className="mt-2 truncate text-xs text-muted-foreground">
+              Загрузка файлов ({uploadingFiles.length}):{" "}
+              {uploadingFiles.join(", ")}
+            </p>
+          )}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Enter — отправить · Shift+Enter — новая строка · файлы можно
+            перетащить в чат
+          </p>
         </form>
       </div>
 
@@ -260,12 +426,16 @@ export default function ProjectChat({ projectId }: { projectId: number }) {
 function ChatMessage({
   message,
   grouped,
+  showTime,
   own,
+  read,
   onPreview,
 }: {
-  message: any;
+  message: ChatMessageData;
   grouped: boolean;
+  showTime: boolean;
   own: boolean;
+  read: boolean;
   onPreview: (url: string) => void;
 }) {
   const kind = attachmentKind(message.attachmentUrl);
@@ -298,7 +468,7 @@ function ChatMessage({
           <button
             type="button"
             className="block overflow-hidden rounded-xl"
-            onClick={() => onPreview(message.attachmentUrl)}
+            onClick={() => onPreview(message.attachmentUrl as string)}
           >
             <img
               src={message.attachmentUrl}
@@ -333,13 +503,21 @@ function ChatMessage({
             {message.content}
           </div>
         )}
-        <div
-          className={`mt-1 text-right text-[10px] ${
-            own ? "text-primary-foreground/70" : "text-muted-foreground"
-          }`}
-        >
-          {timeLabel(message.createdAt)}
-        </div>
+        {showTime && (
+          <div
+            className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+              own ? "text-primary-foreground/70" : "text-muted-foreground"
+            }`}
+          >
+            {timeLabel(message.createdAt)}
+            {own && (
+              <span aria-label={read ? "Прочитано" : "Отправлено"}>
+                <Check className="h-3 w-3" />
+                {read && <Check className="-ml-2.5 h-3 w-3" />}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

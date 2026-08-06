@@ -404,6 +404,35 @@ export const contentRouter = router({
     return { id: messageId };
   }),
 
+  chatMarkRead: protectedProcedure
+    .input(z.object({ projectId: z.number().int(), messageIds: z.array(z.number().int()).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      await requireProjectAccess(db, ctx.user, input.projectId, "viewer");
+      if (!input.messageIds.length) return { success: true };
+
+      const rows = await db
+        .select()
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.projectId, input.projectId),
+            inArray(chatMessages.id, input.messageIds)
+          )
+        );
+      for (const row of rows) {
+        const readBy = Array.isArray(row.readBy)
+          ? row.readBy.filter((id): id is number => typeof id === "number")
+          : [];
+        if (row.senderId === ctx.user.id || readBy.includes(ctx.user.id)) continue;
+        await db
+          .update(chatMessages)
+          .set({ readBy: [...readBy, ctx.user.id] })
+          .where(eq(chatMessages.id, row.id));
+      }
+      return { success: true };
+    }),
+
   // ───────────────── Activity logs ─────────────────
   activityList: protectedProcedure.input(z.object({ projectId: z.number().int() })).query(async ({ ctx, input }) => {
     const db = await getDbOrThrow();
