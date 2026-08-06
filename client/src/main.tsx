@@ -40,26 +40,13 @@ createRoot(document.getElementById("root")!).render(
   </trpc.Provider>
 );
 
-async function clearStaleServiceWorker() {
+async function setupServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
   try {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    if (regs.length > 0) {
-      // Remove the old SW and wipe its caches so the next load uses the fresh shell.
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((name) => caches.delete(name)));
-      } catch {
-        /* ignore cache cleanup errors */
-      }
-      await Promise.all(regs.map((reg) => reg.unregister()));
-      window.location.href = "/";
-      return;
-    }
     await navigator.serviceWorker.register("/sw.js");
   } catch (e) {
     console.error("Service worker setup failed", e);
   }
 }
 
-clearStaleServiceWorker();
+setupServiceWorker();
