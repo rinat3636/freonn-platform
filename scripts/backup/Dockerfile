@@ -9,4 +9,4 @@ COPY crontab /var/spool/cron/root
 
 RUN chmod +x /usr/local/bin/backup.sh
 
-CMD ["crond", "-f"]
+CMD ["crond", "-n"]
