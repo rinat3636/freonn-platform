@@ -37,8 +37,37 @@ function asideClass(mobileOpen: boolean) {
 }
 
 function mainClass(isMap: boolean) {
-  if (isMap) return "flex-1 w-full";
-  return "flex-1 w-full p-4 md:p-6 max-w-7xl mx-auto";
+  if (isMap) return "flex-1 w-full pb-16 lg:pb-0";
+  return "flex-1 w-full p-4 md:p-6 pb-20 lg:pb-6 max-w-7xl mx-auto";
+}
+
+function MobileBottomNav({ nav }: { nav: { path: string; label: string; icon: React.ComponentType<{ className?: string }> }[] }) {
+  const [location] = useLocation();
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur-xl lg:hidden">
+      <div className="flex items-center justify-around">
+        {nav.map((item) => {
+          const active = location === item.path;
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={
+                "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors " +
+                (active
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              <Icon className={active ? "h-5 w-5 text-primary" : "h-5 w-5"} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
 }
 
 export default function DashboardLayout({
@@ -183,6 +212,7 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className={mainClass(isMap)}>{children}</main>
+        <MobileBottomNav nav={nav} />
       </div>
     </div>
   );
