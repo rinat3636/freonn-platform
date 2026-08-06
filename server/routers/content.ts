@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, staffProcedure, router } from "../_core/trpc";
 import { media, documents, workLogs, chatMessages, notifications, activityLogs, aiReports, users } from "../../drizzle/schema";
-import { createNotification, getDbOrThrow, logActivity, omitPassword, requireProjectAccess, schema } from "./_shared";
+import { notifyProjectStakeholders, getDbOrThrow, logActivity, omitPassword, requireProjectAccess, schema } from "./_shared";
 import { groqChat, GROQ_CONTENT_MODEL, isGroqAvailable } from "../groq";
 
 type FeedItem = {
@@ -280,9 +280,7 @@ export const contentRouter = router({
       uploadedBy: ctx.user.id,
     });
     const docId = Number(result[0]?.insertId);
-    await createNotification(db, {
-      userId: ctx.user.id,
-      projectId: input.projectId,
+    await notifyProjectStakeholders(db, input.projectId, ctx.user.id, {
       type: "document_added",
       title: "Новый документ",
       body: `Добавлен документ: ${input.name}`,
@@ -378,28 +376,17 @@ export const contentRouter = router({
     });
     const messageId = Number(result[0]?.insertId);
 
-    const projectMembers = await db
-      .select({ userId: users.id })
-      .from(users)
-      .innerJoin(schema.projectMembers, eq(schema.projectMembers.userId, users.id))
-      .where(eq(schema.projectMembers.projectId, input.projectId));
-    for (const m of projectMembers) {
-      if (m.userId !== ctx.user.id) {
-        await createNotification(db, {
-          userId: m.userId,
-          projectId: input.projectId,
-          type: "chat_message",
-          title: "Новое сообщение в чате",
-          body:
-            input.content.trim().slice(0, 120) ||
-            (input.type === "photo"
-              ? "📷 Фото"
-              : input.type === "document"
-                ? "📎 Документ"
-                : "Новое сообщение"),
-        });
-      }
-    }
+    await notifyProjectStakeholders(db, input.projectId, ctx.user.id, {
+      type: "chat_message",
+      title: "Новое сообщение в чате",
+      body:
+        input.content.trim().slice(0, 120) ||
+        (input.type === "photo"
+          ? "📷 Фото"
+          : input.type === "document"
+            ? "📎 Документ"
+            : "Новое сообщение"),
+    });
     await logActivity(db, input.projectId, ctx.user.id, "CHAT_SENT", "chatMessage", messageId);
     return { id: messageId };
   }),

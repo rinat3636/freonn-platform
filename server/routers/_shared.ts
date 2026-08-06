@@ -132,6 +132,36 @@ export async function createNotification(
   });
 }
 
+export async function notifyProjectStakeholders(
+  db: Awaited<ReturnType<typeof getDb>> & {},
+  projectId: number,
+  senderId: number | null,
+  payload: {
+    type: string;
+    title: string;
+    body: string;
+    channel?: "in_app" | "push" | "email" | "max";
+  }
+) {
+  const [project] = await db
+    .select({ directorId: schema.projects.directorId, customerId: schema.projects.customerId })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  const members = await db
+    .select({ userId: schema.projectMembers.userId })
+    .from(schema.projectMembers)
+    .where(eq(schema.projectMembers.projectId, projectId));
+  const recipients = new Set<number>();
+  if (project?.directorId) recipients.add(project.directorId);
+  if (project?.customerId) recipients.add(project.customerId);
+  for (const m of members) recipients.add(m.userId);
+  for (const userId of Array.from(recipients)) {
+    if (userId === senderId) continue;
+    await createNotification(db, { ...payload, userId, projectId });
+  }
+}
+
 export function omitPassword<T extends { passwordHash?: string | null }>(user: T): Omit<T, "passwordHash"> {
   const { passwordHash, ...rest } = user;
   return rest as Omit<T, "passwordHash">;
