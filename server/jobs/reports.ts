@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import cron from "node-cron";
-import pdfMake from "pdfmake/build/pdfmake";
-import * as pdfFonts from "pdfmake/build/vfs_fonts";
+import pdfMake from "pdfmake/build/pdfmake.js";
+import * as pdfFonts from "pdfmake/build/vfs_fonts.js";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { getDb } from "../db";
 import * as schema from "../../drizzle/schema";
