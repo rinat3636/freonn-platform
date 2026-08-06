@@ -1,4 +1,4 @@
-const CACHE_NAME = "freonn-platform-v4";
+const CACHE_NAME = "freonn-platform-v5";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

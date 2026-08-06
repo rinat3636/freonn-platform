@@ -358,3 +358,8 @@
 .mo-fade-in {
   animation: geoFadeIn 0.6s ease-out both;
 }
+
+/* Hide Leaflet attribution text as requested */
+.leaflet-control-attribution {
+  display: none !important;
+}
