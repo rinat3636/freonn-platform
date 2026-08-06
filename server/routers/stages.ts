@@ -19,10 +19,10 @@ const stageUpdateInput = z.object({
   name: z.string().min(2).optional(),
   orderIndex: z.number().int().optional(),
   status: z.enum(["planned", "active", "done", "blocked"]).optional(),
-  plannedStart: z.coerce.date().optional(),
-  plannedEnd: z.coerce.date().optional(),
-  actualStart: z.coerce.date().optional(),
-  actualEnd: z.coerce.date().optional(),
+  plannedStart: z.coerce.date().nullable().optional(),
+  plannedEnd: z.coerce.date().nullable().optional(),
+  actualStart: z.coerce.date().nullable().optional(),
+  actualEnd: z.coerce.date().nullable().optional(),
   progressPercent: z.number().int().min(0).max(100).optional(),
 });
 
@@ -30,7 +30,11 @@ export const stagesRouter = router({
   list: protectedProcedure.input(z.object({ projectId: z.number().int() })).query(async ({ ctx, input }) => {
     const db = await getDbOrThrow();
     await requireProjectAccess(db, ctx.user, input.projectId, "viewer");
-    const rows = await db.select().from(stages).where(eq(stages.projectId, input.projectId)).orderBy(asc(stages.orderIndex));
+    const rows = await db
+      .select()
+      .from(stages)
+      .where(eq(stages.projectId, input.projectId))
+      .orderBy(asc(stages.orderIndex), asc(stages.id));
     return rows;
   }),
 

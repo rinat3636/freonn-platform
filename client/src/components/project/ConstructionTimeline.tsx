@@ -94,19 +94,21 @@ export default function ConstructionTimeline({
   const swapStages = async (index: number, direction: -1 | 1) => {
     const current = stages.data ?? [];
     const adjacentIndex = index + direction;
-    const adjacent = current[adjacentIndex];
-    const stage = current[index];
-    if (!stage || !adjacent || reordering) return;
+    if (!current[index] || !current[adjacentIndex] || reordering) return;
     setReordering(true);
     try {
-      await reorder.mutateAsync({
-        id: stage.id,
-        orderIndex: adjacent.orderIndex,
-      });
-      await reorder.mutateAsync({
-        id: adjacent.id,
-        orderIndex: stage.orderIndex,
-      });
+      const desired = [...current];
+      const [moved] = desired.splice(index, 1);
+      desired.splice(adjacentIndex, 0, moved);
+      for (let position = 0; position < desired.length; position += 1) {
+        const stage = desired[position];
+        if (stage.orderIndex !== position) {
+          await reorder.mutateAsync({
+            id: stage.id,
+            orderIndex: position,
+          });
+        }
+      }
       await stages.refetch();
     } catch {
       // The mutation already surfaces its error through toast.
@@ -136,35 +138,34 @@ export default function ConstructionTimeline({
                 });
               }}
             >
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
-                <Input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Добавить этап строительства"
-                />
-                <Input
-                  type="date"
-                  aria-label="План: начало"
-                  title="План: начало"
-                  value={plannedStart}
-                  onChange={e => setPlannedStart(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  aria-label="План: окончание"
-                  title="План: окончание"
-                  value={plannedEnd}
-                  onChange={e => setPlannedEnd(e.target.value)}
-                />
-                <Button disabled={create.isPending}>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:items-end">
+                <div className="space-y-1">
+                  <Label>Этап</Label>
+                  <Input
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Добавить этап строительства"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>План: начало</Label>
+                  <Input
+                    type="date"
+                    value={plannedStart}
+                    onChange={e => setPlannedStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>План: окончание</Label>
+                  <Input
+                    type="date"
+                    value={plannedEnd}
+                    onChange={e => setPlannedEnd(e.target.value)}
+                  />
+                </div>
+                <Button disabled={create.isPending} className="sm:self-end">
                   <Plus className="mr-2 h-4 w-4" /> Добавить
                 </Button>
-              </div>
-              <div className="hidden text-xs text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:gap-2">
-                <span />
-                <span>План: начало</span>
-                <span>План: окончание</span>
-                <span />
               </div>
             </form>
           </CardContent>
@@ -203,7 +204,7 @@ export default function ConstructionTimeline({
                   <div className="mt-1 text-xs text-muted-foreground">
                     {stage.progressPercent}% · {labels[stage.status]}
                   </div>
-                  {canDelete && (
+                  {canEdit && (
                     <div className="relative z-20 mt-2 flex justify-center gap-1">
                       <Button
                         type="button"
@@ -404,10 +405,8 @@ function StageDialog({
                 onClick={() =>
                   update.mutate({
                     id: stage.id,
-                    plannedStart: plannedStart
-                      ? new Date(plannedStart)
-                      : undefined,
-                    plannedEnd: plannedEnd ? new Date(plannedEnd) : undefined,
+                    plannedStart: plannedStart ? new Date(plannedStart) : null,
+                    plannedEnd: plannedEnd ? new Date(plannedEnd) : null,
                   })
                 }
               >
