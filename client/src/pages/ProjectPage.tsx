@@ -98,7 +98,7 @@ export default function ProjectPage() {
         </div>
       </DashboardHeader>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="pb-6">
+        <div className="pb-28">
           <TabsContent value="overview">
             <ObjectDashboard
               projectId={projectId}
@@ -133,20 +133,22 @@ export default function ProjectPage() {
             <AIAssistant projectId={projectId} />
           </TabsContent>
         </div>
-        <TabsList className="sticky bottom-0 z-30 flex h-auto w-full flex-nowrap gap-1 overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="min-w-[4.75rem] shrink-0 flex-col gap-1 rounded-xl px-3 py-2 text-[11px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
-              >
-                <Icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </TabsTrigger>
-            );
-          })}
+        <TabsList className="fixed bottom-0 left-0 right-0 z-40 flex h-auto w-full flex-nowrap overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:left-64">
+          <div className="mx-auto flex min-w-max max-w-3xl flex-nowrap gap-1">
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="min-w-[4.75rem] shrink-0 flex-col gap-1 rounded-xl px-3 py-2 text-[11px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </div>
         </TabsList>
       </Tabs>
     </div>

@@ -153,7 +153,7 @@ export default function ProjectTeam({
     setCustomerId(value);
     updateProject.mutate({
       id: projectId,
-      data: { customerId: value === "__none" ? undefined : Number(value) },
+      data: { customerId: value === "__none" ? null : Number(value) },
     });
   };
   const changeForeman = (value: string) => {
@@ -161,7 +161,7 @@ export default function ProjectTeam({
     updateProject.mutate({
       id: projectId,
       data: {
-        primaryForemanId: value === "__none" ? undefined : Number(value),
+        primaryForemanId: value === "__none" ? null : Number(value),
       },
     });
   };
@@ -193,9 +193,7 @@ export default function ProjectTeam({
                   <SelectValue placeholder="Не назначен" />
                 </SelectTrigger>
                 <SelectContent>
-                  {!project.data.customer && (
-                    <SelectItem value="__none">Не назначен</SelectItem>
-                  )}
+                  <SelectItem value="__none">Не назначен</SelectItem>
                   {customers.map(customer => (
                     <SelectItem key={customer.id} value={String(customer.id)}>
                       {customer.name}
@@ -224,9 +222,7 @@ export default function ProjectTeam({
                   <SelectValue placeholder="Не назначен" />
                 </SelectTrigger>
                 <SelectContent>
-                  {!project.data.foreman && (
-                    <SelectItem value="__none">Не назначен</SelectItem>
-                  )}
+                  <SelectItem value="__none">Не назначен</SelectItem>
                   {foremen.map(foreman => (
                     <SelectItem key={foreman.id} value={String(foreman.id)}>
                       {foreman.name}

@@ -18,11 +18,15 @@ const projectInput = z.object({
   address: z.string().optional(),
   startDate: z.coerce.date().optional(),
   plannedEndDate: z.coerce.date().optional(),
-  customerId: z.number().int().optional(),
-  primaryForemanId: z.number().int().optional(),
+  customerId: z.number().int().nullable().optional(),
+  primaryForemanId: z.number().int().nullable().optional(),
   budget: z.number().int().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
+  stages: z
+    .array(z.object({ name: z.string().min(1) }))
+    .max(30)
+    .optional(),
 });
 
 const memberInput = z.object({
@@ -157,6 +161,16 @@ export const projectsRouter = router({
       budget: input.budget,
     });
     const projectId = Number(result[0]?.insertId);
+    if (input.stages?.length) {
+      await db.insert(stages).values(
+        input.stages.map((stage, index) => ({
+          projectId,
+          name: stage.name,
+          orderIndex: index,
+          status: "planned" as const,
+        }))
+      );
+    }
     await logActivity(db, projectId, ctx.user.id, "PROJECT_CREATED", "project", projectId);
     return { id: projectId };
   }),

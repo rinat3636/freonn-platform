@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { scheduleStatus } from "@/lib/format";
 
 function daysLeft(end: Date | string | null | undefined): {
   text: string;
@@ -91,10 +92,13 @@ export default function DashboardPage() {
       setOpen(false);
       setName("");
       setAddress("");
+      setStartDate("");
       setPlannedEndDate("");
       setCoords(null);
       setCustomerId("");
       setForemanId("");
+      setStages([]);
+      setStageDraft("");
       toast.success("Объект создан");
     },
     onError: e => toast.error(e.message),
@@ -102,9 +106,12 @@ export default function DashboardPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [startDate, setStartDate] = useState("");
   const [plannedEndDate, setPlannedEndDate] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [foremanId, setForemanId] = useState("");
+  const [stages, setStages] = useState<string[]>([]);
+  const [stageDraft, setStageDraft] = useState("");
   const [search, setSearch] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null
@@ -130,11 +137,15 @@ export default function DashboardPage() {
     create.mutate({
       name: name.trim(),
       address: address.trim() || undefined,
+      startDate: startDate ? new Date(startDate) : undefined,
       plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : undefined,
       lat: coords?.lat,
       lng: coords?.lng,
       customerId: customerId ? Number(customerId) : undefined,
       primaryForemanId: foremanId ? Number(foremanId) : undefined,
+      stages: stages.length
+        ? stages.map(stage => ({ name: stage }))
+        : undefined,
     });
   };
 
@@ -221,12 +232,80 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <div className="space-y-2">
+                  <Label>Дата начала</Label>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Плановая дата сдачи</Label>
                   <Input
                     type="date"
                     value={plannedEndDate}
                     onChange={e => setPlannedEndDate(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Этапы работ</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={stageDraft}
+                      onChange={e => setStageDraft(e.target.value)}
+                      placeholder="Например, Фундамент"
+                      onKeyDown={e => {
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        const value = stageDraft.trim();
+                        if (!value) return;
+                        setStages(current => [...current, value]);
+                        setStageDraft("");
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const value = stageDraft.trim();
+                        if (!value) return;
+                        setStages(current => [...current, value]);
+                        setStageDraft("");
+                      }}
+                    >
+                      Добавить
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Необязательно, можно добавить позже
+                  </p>
+                  {stages.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {stages.map((stage, index) => (
+                        <Badge
+                          key={`${stage}-${index}`}
+                          variant="secondary"
+                          className="gap-1 pr-1"
+                        >
+                          {stage}
+                          <button
+                            type="button"
+                            className="rounded-full p-0.5 hover:bg-background/70"
+                            onClick={() =>
+                              setStages(current =>
+                                current.filter(
+                                  (_, itemIndex) => itemIndex !== index
+                                )
+                              )
+                            }
+                            aria-label={`Удалить этап ${stage}`}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -375,6 +454,12 @@ export default function DashboardPage() {
             project.startDate,
             project.plannedEndDate
           );
+          const schedule = scheduleStatus(
+            project.progressPercent,
+            project.startDate,
+            project.plannedEndDate,
+            project.status
+          );
           return (
             <Link key={project.id} href={`/projects/${project.id}`}>
               <Card className="app-elevated group h-full cursor-pointer rounded-2xl border border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg">
@@ -393,6 +478,14 @@ export default function DashboardPage() {
                       {left.text}
                     </Badge>
                   </div>
+                  {schedule && (
+                    <Badge
+                      variant="outline"
+                      className={`mt-2 w-fit ${schedule.className}`}
+                    >
+                      {schedule.label}
+                    </Badge>
+                  )}
                   {project.address && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5">
                       <MapPin className="h-3.5 w-3.5 shrink-0" />{" "}
