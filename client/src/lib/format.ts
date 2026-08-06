@@ -40,7 +40,7 @@ export function scheduleStatus(
     return {
       level: "overdue",
       label: "Просрочка",
-      className: "bg-red-100 text-red-700 border-red-200",
+      className: "bg-red-100 text-red-700 border-red-200 gap-1.5",
     };
   }
 
@@ -55,7 +55,7 @@ export function scheduleStatus(
       return {
         level: "at_risk",
         label: "Риск срыва",
-        className: "bg-amber-100 text-amber-700 border-amber-200",
+        className: "bg-amber-100 text-amber-700 border-amber-200 gap-1.5",
       };
     }
   }
@@ -63,6 +63,6 @@ export function scheduleStatus(
   return {
     level: "on_track",
     label: "По графику",
-    className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    className: "bg-emerald-100 text-emerald-700 border-emerald-200 gap-1.5",
   };
 }

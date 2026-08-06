@@ -9,19 +9,19 @@ export default function ConstructionTimer({ project }: { project: any }) {
   const risk = {
     on_track: {
       label: "По графику",
-      className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      className: "bg-emerald-100 text-emerald-700 border-emerald-200 gap-1.5",
     },
     at_risk: {
       label: "Риск срыва",
-      className: "bg-amber-100 text-amber-700 border-amber-200",
+      className: "bg-amber-100 text-amber-700 border-amber-200 gap-1.5",
     },
     overdue: {
       label: "Просрочка",
-      className: "bg-red-100 text-red-700 border-red-200",
+      className: "bg-red-100 text-red-700 border-red-200 gap-1.5",
     },
   }[project.risk as string] ?? {
     label: "По графику",
-    className: "bg-muted text-muted-foreground",
+    className: "bg-muted text-muted-foreground gap-1.5",
   };
   return (
     <Card className="overflow-hidden rounded-2xl border border-border/50 shadow-sm bg-gradient-to-br from-foreground to-slate-800 text-white">
