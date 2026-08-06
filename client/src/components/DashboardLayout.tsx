@@ -58,7 +58,7 @@ export default function DashboardLayout({
   return (
     <div className="app-theme flex min-h-screen bg-background">
       <aside className={asideClass(mobileOpen)}>
-        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
+        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4 pt-[env(safe-area-inset-top)]">
           <div className="rounded-lg bg-white px-2 py-1">
             <FreonnLogo height={28} showPro={false} />
           </div>
@@ -135,7 +135,7 @@ export default function DashboardLayout({
             : "flex-1 min-w-0 flex flex-col"
         }
       >
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border/60 bg-card/85 px-4 backdrop-blur-xl lg:px-6 shadow-sm">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border/60 bg-card/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:px-6 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"

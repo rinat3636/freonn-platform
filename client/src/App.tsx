@@ -1,8 +1,10 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Route, Switch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import LoginPage from "@/pages/LoginPage";
+import { PwaSplash } from "@/components/PwaSplash";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const MapPage = lazy(() => import("@/pages/MapPage"));
@@ -40,15 +42,17 @@ function AppRouter() {
   );
 }
 
-export default function App() {
+export default function App({ onReady }: { onReady?: () => void }) {
   const { isAuthenticated, isLoading } = useAuth();
 
+  useEffect(() => {
+    if (!isLoading) {
+      onReady?.();
+    }
+  }, [isLoading, onReady]);
+
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-muted-foreground">Загрузка…</div>
-      </div>
-    );
+    return <PwaSplash />;
   }
 
   if (!isAuthenticated) {
@@ -58,6 +62,7 @@ export default function App() {
   return (
     <DashboardLayout>
       <AppRouter />
+      <PWAInstallPrompt />
     </DashboardLayout>
   );
 }

@@ -31,14 +31,24 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-createRoot(document.getElementById("root")!).render(
+function hideSplash() {
+  const splash = document.getElementById("app-splash");
+  if (!splash) return;
+  splash.classList.add("hidden");
+  window.setTimeout(() => splash.remove(), 400);
+}
+
+const root = createRoot(document.getElementById("root")!);
+root.render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <App onReady={hideSplash} />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   </trpc.Provider>
 );
+
+window.setTimeout(hideSplash, 100);
 
 async function setupServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
