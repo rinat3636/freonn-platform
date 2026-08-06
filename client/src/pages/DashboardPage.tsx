@@ -483,6 +483,7 @@ export default function DashboardPage() {
                       variant="outline"
                       className={`mt-2 w-fit ${schedule.className}`}
                     >
+                      <span className="h-2 w-2 rounded-full bg-current" />
                       {schedule.label}
                     </Badge>
                   )}

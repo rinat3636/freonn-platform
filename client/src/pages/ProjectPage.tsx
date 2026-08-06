@@ -213,18 +213,18 @@ export default function ProjectPage() {
             </Suspense>
           </TabsContent>
         </div>
-        <TabsList className="fixed bottom-0 left-0 right-0 z-40 flex h-auto w-full flex-nowrap overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:left-64">
-          <div className="mx-auto flex min-w-max max-w-3xl flex-nowrap gap-1">
+        <TabsList className="fixed bottom-0 left-0 right-0 z-40 flex h-auto w-full flex-nowrap justify-start overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center lg:left-64">
+          <div className="flex min-w-max gap-1 px-1 sm:px-0">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="min-w-[4.75rem] shrink-0 flex-col gap-1 rounded-xl px-3 py-2 text-[11px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                  className="min-w-[3.25rem] shrink-0 flex-col gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary sm:min-w-[4.75rem] sm:px-3 sm:text-[11px]"
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </TabsTrigger>
               );
             })}

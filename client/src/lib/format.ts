@@ -39,7 +39,7 @@ export function scheduleStatus(
   if (now > end && status !== "completed") {
     return {
       level: "overdue",
-      label: "🔴 Просрочка",
+      label: "Просрочка",
       className: "bg-red-100 text-red-700 border-red-200",
     };
   }
@@ -54,7 +54,7 @@ export function scheduleStatus(
     if (progressPercent - expected < -20) {
       return {
         level: "at_risk",
-        label: "🟡 Риск срыва",
+        label: "Риск срыва",
         className: "bg-amber-100 text-amber-700 border-amber-200",
       };
     }
@@ -62,7 +62,7 @@ export function scheduleStatus(
 
   return {
     level: "on_track",
-    label: "🟢 По графику",
+    label: "По графику",
     className: "bg-emerald-100 text-emerald-700 border-emerald-200",
   };
 }

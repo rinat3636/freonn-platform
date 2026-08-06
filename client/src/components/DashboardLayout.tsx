@@ -199,21 +199,21 @@ export function DashboardHeader({
   const isProject = location.startsWith("/projects/");
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {isProject && (
           <Button
             variant="outline"
             size="icon"
             asChild
-            className="rounded-full shrink-0"
+            className="rounded-full shrink-0 h-8 w-8 sm:h-9 sm:w-9"
           >
             <Link href="/">
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
           </Button>
         )}
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight truncate">
           {title}
         </h1>
       </div>
