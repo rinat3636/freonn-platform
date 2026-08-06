@@ -81,6 +81,41 @@ export default function ProjectPage() {
       </div>
     );
   const p = project.data;
+  const participantCandidates: Array<{
+    id: number;
+    name: string;
+    role: string;
+  } | null> = [
+    ...p.members.map(member => ({
+      id: member.id,
+      name: member.name,
+      role: member.role,
+    })),
+    p.director && {
+      id: p.director.id,
+      name: p.director.name,
+      role: p.director.role,
+    },
+    p.foreman && {
+      id: p.foreman.id,
+      name: p.foreman.name,
+      role: p.foreman.role,
+    },
+    p.customer && {
+      id: p.customer.id,
+      name: p.customer.name,
+      role: p.customer.role,
+    },
+  ];
+  const participants = Array.from(
+    new Map(
+      participantCandidates
+        .filter((participant): participant is NonNullable<typeof participant> =>
+          Boolean(participant)
+        )
+        .map(participant => [participant.id, participant] as const)
+    ).values()
+  );
   return (
     <div>
       <DashboardHeader title={p.name}>
@@ -134,7 +169,12 @@ export default function ProjectPage() {
             />
           </TabsContent>
           <TabsContent value="chat">
-            <ProjectChat projectId={projectId} />
+            <ProjectChat
+              projectId={projectId}
+              projectName={p.name}
+              participants={participants}
+              isActive={activeTab === "chat"}
+            />
           </TabsContent>
           <TabsContent value="team">
             <ProjectTeam
