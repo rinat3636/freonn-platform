@@ -25,7 +25,6 @@ const registerInput = z.object({
   password: z.string().min(6),
   name: z.string().min(2),
   phone: z.string().optional(),
-  role: z.enum(["director", "foreman", "customer"]).optional(),
 });
 
 export const authRouter = router({
@@ -91,7 +90,7 @@ export const authRouter = router({
     const isFirst = countResult[0]?.count === 0;
 
     const passwordHash = await hashPassword(input.password);
-    const role = isFirst ? "director" : (input.role ?? "customer");
+    const role = isFirst ? "director" : "customer";
 
     const result = await db.insert(users).values({
       email: input.email,
