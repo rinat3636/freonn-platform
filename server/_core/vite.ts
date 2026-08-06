@@ -52,7 +52,7 @@ export function serveStatic(app: Express) {
   const staticOptions: any = {
     setHeaders: (res: any, filePath: string) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
-      const fileName = path.basename(filePath);
+      const fileName = path.basename(filePath).replace(/\.(br|gz)$/i, "");
       if (
         fileName.endsWith(".html") ||
         fileName === "sw.js" ||
