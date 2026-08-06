@@ -98,51 +98,56 @@ export default function ProjectPage() {
         </div>
       </DashboardHeader>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6 flex h-auto flex-wrap gap-1.5 rounded-2xl bg-muted/60 p-1.5">
+        <div className="pb-6">
+          <TabsContent value="overview">
+            <ObjectDashboard
+              projectId={projectId}
+              setActiveTab={setActiveTab}
+            />
+          </TabsContent>
+          <TabsContent value="timeline">
+            <ConstructionTimeline projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="feed">
+            <ConstructionFeed projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="photos">
+            <StagePhotos projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="cameras">
+            <CamerasPanel projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="documents">
+            <ProjectDocuments projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="chat">
+            <ProjectChat projectId={projectId} />
+          </TabsContent>
+          <TabsContent value="team">
+            <ProjectTeam
+              projectId={projectId}
+              canManage={user?.role === "director"}
+            />
+          </TabsContent>
+          <TabsContent value="ai">
+            <AIAssistant projectId={projectId} />
+          </TabsContent>
+        </div>
+        <TabsList className="sticky bottom-0 z-30 flex h-auto w-full flex-nowrap gap-1 overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="gap-2 rounded-xl px-3 py-2 text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="min-w-[4.75rem] shrink-0 flex-col gap-1 rounded-xl px-3 py-2 text-[11px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
               >
                 <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span>{tab.label}</span>
               </TabsTrigger>
             );
           })}
         </TabsList>
-        <TabsContent value="overview">
-          <ObjectDashboard projectId={projectId} setActiveTab={setActiveTab} />
-        </TabsContent>
-        <TabsContent value="timeline">
-          <ConstructionTimeline projectId={projectId} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="feed">
-          <ConstructionFeed projectId={projectId} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="photos">
-          <StagePhotos projectId={projectId} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="cameras">
-          <CamerasPanel projectId={projectId} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="documents">
-          <ProjectDocuments projectId={projectId} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="chat">
-          <ProjectChat projectId={projectId} />
-        </TabsContent>
-        <TabsContent value="team">
-          <ProjectTeam
-            projectId={projectId}
-            canManage={user?.role === "director"}
-          />
-        </TabsContent>
-        <TabsContent value="ai">
-          <AIAssistant projectId={projectId} />
-        </TabsContent>
       </Tabs>
     </div>
   );

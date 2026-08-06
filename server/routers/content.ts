@@ -55,12 +55,17 @@ const workLogInput = z.object({
 });
 
 // ───────────────── Chat ─────────────────
-const chatInput = z.object({
-  projectId: z.number().int(),
-  content: z.string().min(1),
-  type: z.enum(["text", "photo", "document", "system"]).default("text"),
-  attachmentUrl: z.string().url().optional(),
-});
+const chatInput = z
+  .object({
+    projectId: z.number().int(),
+    content: z.string().max(4000).default(""),
+    type: z.enum(["text", "photo", "document", "system"]).default("text"),
+    attachmentUrl: z.string().url().optional(),
+  })
+  .refine(value => value.content.trim().length > 0 || !!value.attachmentUrl, {
+    message: "Сообщение или вложение обязательно",
+    path: ["content"],
+  });
 
 // ───────────────── AI report ─────────────────
 const aiReportInput = z.object({
@@ -182,7 +187,10 @@ export const contentRouter = router({
         ...chatRows
           .slice()
           .reverse()
-          .map(message => `- ${contextNames.get(message.senderId) ?? "Пользователь"}: ${message.content}`),
+          .map(
+            message =>
+              `- ${contextNames.get(message.senderId) ?? "Пользователь"}: ${message.content?.trim() || "[вложение]"}`
+          ),
         `Вопрос пользователя: ${input.question}`,
       ].join("\n");
 
@@ -382,7 +390,13 @@ export const contentRouter = router({
           projectId: input.projectId,
           type: "chat_message",
           title: "Новое сообщение в чате",
-          body: input.content.slice(0, 120),
+          body:
+            input.content.trim().slice(0, 120) ||
+            (input.type === "photo"
+              ? "📷 Фото"
+              : input.type === "document"
+                ? "📎 Документ"
+                : "Новое сообщение"),
         });
       }
     }
