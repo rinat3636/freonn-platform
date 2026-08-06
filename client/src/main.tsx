@@ -41,5 +41,19 @@ createRoot(document.getElementById("root")!).render(
 );
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(console.error);
+  navigator.serviceWorker
+    .getRegistrations()
+    .then(async (regs) => {
+      let removed = false;
+      for (const reg of regs) {
+        await reg.unregister();
+        removed = true;
+      }
+      if (removed) {
+        window.location.reload();
+        return;
+      }
+      return navigator.serviceWorker.register("/sw.js");
+    })
+    .catch(console.error);
 }
