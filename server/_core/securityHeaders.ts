@@ -47,6 +47,7 @@ export function applySecurityHeaders(app: Express): void {
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("X-DNS-Prefetch-Control", "off");
     res.setHeader("Content-Security-Policy", csp());
+    res.setHeader("Connection", "close");
     res.setHeader(
       "Permissions-Policy",
       "accelerometer=(), camera=(), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
