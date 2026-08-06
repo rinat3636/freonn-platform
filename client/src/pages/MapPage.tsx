@@ -200,12 +200,13 @@ export default function MapPage() {
         center={[55.7558, 37.6173]}
         zoom={10}
         zoomControl={true}
+        attributionControl={false}
         className="h-full min-h-[480px] w-full"
         scrollWheelZoom
       >
         <MapViewport positions={positions} selectedId={selectedId} />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution=""
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {projects.data?.map(p => (
