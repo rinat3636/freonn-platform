@@ -19,6 +19,7 @@ import {
   MapPin,
   Building2,
   Users,
+  Target,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -81,10 +82,14 @@ export default function DashboardLayout({
   const isMap = location === "/map";
   const isProject = location.startsWith("/projects/");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const staffNav =
+    user?.role === "customer"
+      ? baseNav
+      : [...baseNav, { path: "/leads", label: "Лиды", icon: Target }];
   const nav =
     user?.role === "director"
-      ? [...baseNav, { path: "/users", label: "Команда", icon: Users }]
-      : baseNav;
+      ? [...staffNav, { path: "/users", label: "Команда", icon: Users }]
+      : staffNav;
 
   return (
     <div className="app-theme flex min-h-screen bg-background">

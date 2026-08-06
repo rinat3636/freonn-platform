@@ -2,8 +2,8 @@ import { z } from "zod";
 import { and, eq, asc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
-import { stages } from "../../drizzle/schema";
-import { getDbOrThrow, logActivity, recalcProjectProgress, requireProjectAccess } from "./_shared";
+import { stages, projects } from "../../drizzle/schema";
+import { getDbOrThrow, logActivity, notifyProjectStakeholders, recalcProjectProgress, requireProjectAccess } from "./_shared";
 
 const stageInput = z.object({
   projectId: z.number().int(),
@@ -24,6 +24,12 @@ const stageUpdateInput = z.object({
   actualStart: z.coerce.date().nullable().optional(),
   actualEnd: z.coerce.date().nullable().optional(),
   progressPercent: z.number().int().min(0).max(100).optional(),
+});
+
+const stageReviewInput = z.object({
+  id: z.number().int(),
+  decision: z.enum(["accepted", "rejected"]),
+  comment: z.string().optional(),
 });
 
 export const stagesRouter = router({
@@ -61,7 +67,7 @@ export const stagesRouter = router({
     if (!stage) throw new TRPCError({ code: "NOT_FOUND", message: "Этап не найден" });
     await requireProjectAccess(db, ctx.user, stage.projectId, "foreman");
 
-    const values: Partial<typeof input> = {};
+    const values: Partial<typeof stages.$inferInsert> = {};
     if (input.name !== undefined) values.name = input.name;
     if (input.orderIndex !== undefined) values.orderIndex = input.orderIndex;
     if (input.plannedStart !== undefined) values.plannedStart = input.plannedStart;
@@ -74,6 +80,12 @@ export const stagesRouter = router({
       if (input.status === "done") {
         values.actualEnd = input.actualEnd ?? new Date();
         values.progressPercent = 100;
+        if (stage.reviewStatus === "rejected") {
+          values.reviewStatus = "pending" as const;
+          values.reviewComment = null;
+          values.reviewedAt = null;
+          values.reviewedBy = null;
+        }
       }
     }
     if (input.progressPercent !== undefined) values.progressPercent = input.progressPercent;
@@ -92,6 +104,40 @@ export const stagesRouter = router({
     await db.delete(stages).where(eq(stages.id, input.id));
     await recalcProjectProgress(db, stage.projectId);
     await logActivity(db, stage.projectId, ctx.user.id, "STAGE_DELETED", "stage", input.id, { name: stage.name });
+    return { success: true };
+  }),
+
+  review: protectedProcedure.input(stageReviewInput).mutation(async ({ ctx, input }) => {
+    const db = await getDbOrThrow();
+    const [stage] = await db.select().from(stages).where(eq(stages.id, input.id)).limit(1);
+    if (!stage) throw new TRPCError({ code: "NOT_FOUND", message: "Этап не найден" });
+    await requireProjectAccess(db, ctx.user, stage.projectId, "viewer");
+    const [project] = await db
+      .select({ customerId: projects.customerId })
+      .from(projects)
+      .where(eq(projects.id, stage.projectId))
+      .limit(1);
+    if (project?.customerId !== ctx.user.id) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Только заказчик может принимать этапы" });
+    }
+
+    const accepted = input.decision === "accepted";
+    const values: Partial<typeof stages.$inferInsert> = {
+      reviewStatus: input.decision,
+      reviewComment: input.comment || null,
+      reviewedAt: new Date(),
+      reviewedBy: ctx.user.id,
+      status: accepted ? "done" : "blocked",
+      progressPercent: accepted ? 100 : 0,
+    };
+    await db.update(stages).set(values).where(eq(stages.id, input.id));
+    await recalcProjectProgress(db, stage.projectId);
+    await notifyProjectStakeholders(db, stage.projectId, ctx.user.id, {
+      type: "stage_review",
+      title: accepted ? "Этап принят" : "Этап не принят",
+      body: `${stage.name}${input.comment ? ` — ${input.comment}` : ""}`,
+    });
+    await logActivity(db, stage.projectId, ctx.user.id, accepted ? "STAGE_ACCEPTED" : "STAGE_REJECTED", "stage", stage.id, { comment: input.comment });
     return { success: true };
   }),
 });

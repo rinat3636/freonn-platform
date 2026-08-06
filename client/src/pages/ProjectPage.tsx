@@ -6,6 +6,7 @@ import {
   FileText,
   ImageIcon,
   MessageSquare,
+  PieChart,
   Sparkles,
   Timer,
   Users,
@@ -27,6 +28,7 @@ const ProjectDocuments = lazy(() => import("@/components/project/ProjectDocument
 const ProjectChat = lazy(() => import("@/components/project/ProjectChat"));
 const AIAssistant = lazy(() => import("@/components/project/AIAssistant"));
 const ProjectTeam = lazy(() => import("@/components/project/ProjectTeam"));
+const ProjectReports = lazy(() => import("@/components/project/ProjectReports"));
 
 function PanelLoader() {
   return (
@@ -45,6 +47,7 @@ const tabs = [
   { value: "documents", label: "Документы", icon: FileText },
   { value: "chat", label: "Чат", icon: MessageSquare },
   { value: "team", label: "Команда", icon: Users },
+  { value: "reports", label: "Отчёты", icon: PieChart },
   { value: "ai", label: "AI", icon: Cpu },
 ];
 const statusLabels: Record<string, string> = {
@@ -90,6 +93,7 @@ export default function ProjectPage() {
       </div>
     );
   const p = project.data;
+  const isCustomer = p.customer?.id === user?.id;
   const participantCandidates: Array<{
     id: number;
     name: string;
@@ -158,6 +162,7 @@ export default function ProjectPage() {
                 projectId={projectId}
                 canEdit={canEdit}
                 canPlan={canPlan}
+                isCustomer={isCustomer}
               />
             </Suspense>
           </TabsContent>
@@ -186,6 +191,7 @@ export default function ProjectPage() {
                 projectId={projectId}
                 canEdit={canEdit}
                 canPlan={canPlan}
+                isCustomer={isCustomer}
               />
             </Suspense>
           </TabsContent>
@@ -205,6 +211,11 @@ export default function ProjectPage() {
                 projectId={projectId}
                 canManage={user?.role === "director"}
               />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="reports">
+            <Suspense fallback={<PanelLoader />}>
+              <ProjectReports projectId={projectId} canEdit={canEdit} />
             </Suspense>
           </TabsContent>
           <TabsContent value="ai">

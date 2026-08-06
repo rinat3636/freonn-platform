@@ -11,6 +11,7 @@ const MapPage = lazy(() => import("@/pages/MapPage"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 const ProjectPage = lazy(() => import("@/pages/ProjectPage"));
 const UsersPage = lazy(() => import("@/pages/UsersPage"));
+const LeadsPage = lazy(() => import("@/pages/LeadsPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
@@ -33,6 +34,7 @@ function AppRouter() {
         <Route path="/" component={DashboardPage} />
         <Route path="/map" component={MapPage} />
         <Route path="/notifications" component={NotificationsPage} />
+        <Route path="/leads" component={LeadsPage} />
         <Route path="/users" component={UsersPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route path="/projects/:id" component={ProjectPage} />

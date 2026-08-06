@@ -4,6 +4,7 @@ import { createServer } from "http";
 import multer from "multer";
 import net from "net";
 import path from "path";
+import { eq } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -17,6 +18,10 @@ import { createHlsProxyMiddleware } from "./hlsProxy";
 import { parse as parseCookie } from "cookie";
 import { getUploadDir } from "./paths";
 import { startRecorderJobs } from "../jobs/recorder";
+import { startReportJobs } from "../jobs/reports";
+import { createNotification } from "../routers/_shared";
+import * as schema from "../../drizzle/schema";
+import { getDb } from "../db";
 import fs from "fs";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -112,6 +117,48 @@ async function startServer() {
     }
   });
 
+  // ── Leads webhook from freonn.pro / freonn.ru ───────────────────────────────────────────────────
+  app.post("/api/webhooks/leads", rateLimit({ windowMs: 60_000, max: 10 }), async (req, res) => {
+    try {
+      const body = req.body || {};
+      const { name, phone, email, message, service, buildingType, source = "website" } = body;
+      if (!name || (!phone && !email)) {
+        res.status(400).json({ success: false, error: "Имя и телефон или email обязательны" });
+        return;
+      }
+      const db = await getDb();
+      if (!db) {
+        res.status(503).json({ success: false, error: "Database unavailable" });
+        return;
+      }
+      const metadata = JSON.stringify({ raw: body });
+      const [result] = await db.insert(schema.leads).values({
+        source,
+        name,
+        phone,
+        email,
+        message,
+        service,
+        buildingType,
+        metadata,
+      });
+      const leadId = Number(result?.insertId);
+      const directors = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, "director"));
+      for (const d of directors) {
+        await createNotification(db, {
+          userId: d.id,
+          type: "lead",
+          title: "Новая заявка с сайта",
+          body: `${name}${phone ? ` · ${phone}` : ""}${service ? ` · ${service}` : ""}`,
+        });
+      }
+      res.json({ success: true, leadId });
+    } catch (e) {
+      console.error("[webhooks/leads] error:", e);
+      res.status(500).json({ success: false, error: "Ошибка сервера" });
+    }
+  });
+
   app.use("/api/hls", createHlsProxyMiddleware());
 
   app.use(
@@ -138,6 +185,7 @@ async function startServer() {
   server.listen(port, "0.0.0.0", () => {
     console.log(`[Freonn Platform] Server running on http://0.0.0.0:${port}`);
     startRecorderJobs();
+    startReportJobs();
   });
 }
 

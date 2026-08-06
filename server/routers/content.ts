@@ -299,6 +299,43 @@ export const contentRouter = router({
     return { success: true };
   }),
 
+  documentRequestSignature: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+    const db = await getDbOrThrow();
+    const [item] = await db.select().from(documents).where(eq(documents.id, input.id)).limit(1);
+    if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Документ не найден" });
+    await requireProjectAccess(db, ctx.user, item.projectId, "foreman");
+    await db.update(documents).set({ signatureStatus: "pending" }).where(eq(documents.id, input.id));
+    await notifyProjectStakeholders(db, item.projectId, ctx.user.id, {
+      type: "document_signature_request",
+      title: "Документ на подпись",
+      body: `Документ «${item.name}» ожидает подписания`,
+    });
+    await logActivity(db, item.projectId, ctx.user.id, "DOCUMENT_SIGNATURE_REQUESTED", "document", item.id, { name: item.name });
+    return { success: true };
+  }),
+
+  documentSign: protectedProcedure.input(z.object({ id: z.number().int(), comment: z.string().optional() })).mutation(async ({ ctx, input }) => {
+    const db = await getDbOrThrow();
+    const [item] = await db.select().from(documents).where(eq(documents.id, input.id)).limit(1);
+    if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Документ не найден" });
+    await requireProjectAccess(db, ctx.user, item.projectId, "viewer");
+    const [project] = await db.select({ customerId: schema.projects.customerId }).from(schema.projects).where(eq(schema.projects.id, item.projectId)).limit(1);
+    if (project?.customerId !== ctx.user.id) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Только заказчик может подписывать документы" });
+    }
+    await db
+      .update(documents)
+      .set({ signatureStatus: "signed", signedBy: ctx.user.id, signedAt: new Date(), signerComment: input.comment || null })
+      .where(eq(documents.id, input.id));
+    await notifyProjectStakeholders(db, item.projectId, ctx.user.id, {
+      type: "document_signed",
+      title: "Документ подписан",
+      body: `Документ «${item.name}» подписан заказчиком`,
+    });
+    await logActivity(db, item.projectId, ctx.user.id, "DOCUMENT_SIGNED", "document", item.id, { name: item.name, comment: input.comment });
+    return { success: true };
+  }),
+
   // ───────────────── WorkLogs ─────────────────
   workLogsList: protectedProcedure.input(z.object({ projectId: z.number().int(), stageId: z.number().int().optional() })).query(async ({ ctx, input }) => {
     const db = await getDbOrThrow();

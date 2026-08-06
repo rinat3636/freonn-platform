@@ -88,6 +88,10 @@ export const stages = mysqlTable("stages", {
   actualEnd: timestamp("actualEnd"),
   progressPercent: int("progressPercent").default(0).notNull(),
   dependsOnStageId: int("dependsOnStageId"),
+  reviewStatus: mysqlEnum("reviewStatus", ["pending", "accepted", "rejected"]).default("pending").notNull(),
+  reviewComment: text("reviewComment"),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedBy: int("reviewedBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, t => [
@@ -136,6 +140,10 @@ export const documents = mysqlTable("documents", {
   mimeType: varchar("mimeType", { length: 100 }),
   size: int("size"),
   uploadedBy: int("uploadedBy").notNull(),
+  signatureStatus: mysqlEnum("signatureStatus", ["unsigned", "pending", "signed"]).default("unsigned").notNull(),
+  signedBy: int("signedBy"),
+  signedAt: timestamp("signedAt"),
+  signerComment: text("signerComment"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, t => [
   index("docProjectIdx").on(t.projectId),
@@ -258,6 +266,52 @@ export const notifications = mysqlTable("notifications", {
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
   project: one(projects, { fields: [notifications.projectId], references: [projects.id] }),
+}));
+
+export const reports = mysqlTable("reports", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  periodStart: timestamp("periodStart"),
+  periodEnd: timestamp("periodEnd"),
+  fileUrl: varchar("fileUrl", { length: 1000 }),
+  status: mysqlEnum("status", ["pending", "ready", "failed"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, t => [
+  index("reportProjectIdx").on(t.projectId),
+]);
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  project: one(projects, { fields: [reports.projectId], references: [projects.id] }),
+}));
+
+export const leads = mysqlTable("leads", {
+  id: int("id").autoincrement().primaryKey(),
+  source: varchar("source", { length: 64 }).notNull(),
+  status: mysqlEnum("status", ["new", "in_progress", "contract", "project", "cancelled"]).default("new").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 64 }),
+  email: varchar("email", { length: 255 }),
+  message: text("message"),
+  service: varchar("service", { length: 255 }),
+  buildingType: varchar("buildingType", { length: 255 }),
+  metadata: text("metadata"),
+  assignedTo: int("assignedTo"),
+  projectId: int("projectId"),
+  customerId: int("customerId"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, t => [
+  index("leadStatusIdx").on(t.status),
+  index("leadSourceIdx").on(t.source),
+]);
+
+export const leadsRelations = relations(leads, ({ one }) => ({
+  project: one(projects, { fields: [leads.projectId], references: [projects.id] }),
+  assignedUser: one(users, { fields: [leads.assignedTo], references: [users.id] }),
+  customer: one(users, { fields: [leads.customerId], references: [users.id] }),
 }));
 
 export const passwordResetTokens = mysqlTable("passwordResetTokens", {

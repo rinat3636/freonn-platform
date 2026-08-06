@@ -82,6 +82,16 @@ async function findProjectId(
     return cam?.projectId ?? null;
   }
 
+  if (segments.length === 2 && type === "reports") {
+    const pattern = `%/uploads/reports/${filename}`;
+    const [report] = await db
+      .select({ projectId: schema.reports.projectId })
+      .from(schema.reports)
+      .where(like(schema.reports.fileUrl, pattern))
+      .limit(1);
+    return report?.projectId ?? null;
+  }
+
   if (segments.length === 2 && type === "timelapse") {
     const cameraId = Number(filename.split("-")[0]);
     if (!Number.isFinite(cameraId)) return null;

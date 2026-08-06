@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,10 +67,12 @@ export default function ConstructionTimeline({
   projectId,
   canEdit,
   canPlan,
+  isCustomer,
 }: {
   projectId: number;
   canEdit: boolean;
   canPlan: boolean;
+  isCustomer: boolean;
 }) {
   const stages = trpc.stages.list.useQuery({ projectId });
   const reorder = trpc.stages.update.useMutation({
@@ -255,6 +258,7 @@ export default function ConstructionTimeline({
           projectId={projectId}
           canEdit={canEdit}
           canPlan={canPlan}
+          isCustomer={isCustomer}
           onClose={() => setSelected(null)}
           onUpdated={() => {
             stages.refetch();
@@ -271,11 +275,18 @@ export default function ConstructionTimeline({
   );
 }
 
+const reviewLabels: Record<string, string> = {
+  pending: "На приёмке",
+  accepted: "Принят",
+  rejected: "Замечания",
+};
+
 function StageDialog({
   stage,
   projectId,
   canEdit,
   canPlan,
+  isCustomer,
   onClose,
   onUpdated,
   onMediaUpdated,
@@ -285,6 +296,7 @@ function StageDialog({
   projectId: number;
   canEdit: boolean;
   canPlan: boolean;
+  isCustomer: boolean;
   onClose: () => void;
   onUpdated: () => void;
   onMediaUpdated: () => void;
@@ -299,6 +311,10 @@ function StageDialog({
     stageId: stage.id,
   });
   const update = trpc.stages.update.useMutation({
+    onSuccess: onUpdated,
+    onError: e => toast.error(e.message),
+  });
+  const review = trpc.stages.review.useMutation({
     onSuccess: onUpdated,
     onError: e => toast.error(e.message),
   });
@@ -323,6 +339,7 @@ function StageDialog({
   );
   const [plannedEnd, setPlannedEnd] = useState(dateValue(stage.plannedEnd));
   const [uploading, setUploading] = useState(false);
+  const [reviewComment, setReviewComment] = useState(stage.reviewComment ?? "");
   const duration =
     stage.actualStart && stage.actualEnd
       ? Math.ceil(
@@ -371,12 +388,23 @@ function StageDialog({
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{labels[stage.status]}</Badge>
             <Badge variant="secondary">{stage.progressPercent}%</Badge>
+            {stage.status === "done" && stage.reviewStatus && stage.reviewStatus !== "pending" && (
+              <Badge variant={stage.reviewStatus === "accepted" ? "default" : "destructive"}>
+                {reviewLabels[stage.reviewStatus]}
+              </Badge>
+            )}
             {duration !== null && (
               <span className="text-sm text-muted-foreground">
                 Длительность: {duration} дн.
               </span>
             )}
           </div>
+          {stage.reviewComment && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <span className="font-medium">Замечание: </span>
+              {stage.reviewComment}
+            </div>
+          )}
           <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>План: начало</Label>
@@ -455,6 +483,56 @@ function StageDialog({
                     })
                   }
                 />
+              </div>
+            </div>
+          )}
+          {isCustomer && stage.status === "done" && stage.reviewStatus !== "accepted" && (
+            <div className="space-y-3 border-t pt-4">
+              <Label htmlFor="review-comment">Замечание заказчика</Label>
+              <Textarea
+                id="review-comment"
+                value={reviewComment}
+                onChange={e => setReviewComment(e.target.value)}
+                placeholder="Если есть замечания, опишите их"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  disabled={review.isPending}
+                  onClick={() =>
+                    review.mutate({
+                      id: stage.id,
+                      decision: "accepted",
+                      comment: reviewComment,
+                    })
+                  }
+                >
+                  {review.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  Принять
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={review.isPending}
+                  onClick={() =>
+                    review.mutate({
+                      id: stage.id,
+                      decision: "rejected",
+                      comment: reviewComment,
+                    })
+                  }
+                >
+                  {review.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <X className="mr-2 h-4 w-4" />
+                  )}
+                  Замечания
+                </Button>
               </div>
             </div>
           )}
