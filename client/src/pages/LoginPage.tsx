@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,20 +16,17 @@ import { Loader2 } from "lucide-react";
 import FreonnLogo from "@/components/FreonnLogo";
 
 export default function LoginPage() {
-  const { setToken } = useAuth();
   const [tab, setTab] = useState<"login" | "register">("login");
 
   const login = trpc.auth.login.useMutation({
-    onSuccess: data => {
-      setToken(data.token);
+    onSuccess: () => {
       window.location.href = "/";
     },
     onError: e => toast.error(e.message),
   });
 
   const register = trpc.auth.register.useMutation({
-    onSuccess: data => {
-      setToken(data.token);
+    onSuccess: () => {
       window.location.href = "/";
     },
     onError: e => toast.error(e.message),

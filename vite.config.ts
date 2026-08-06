@@ -201,6 +201,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("node_modules/hls.js")) {
             return "vendor-hls";
           }
+          if (id.includes("node_modules/leaflet") || id.includes("node_modules/react-leaflet")) {
+            return "vendor-map";
+          }
           if (id.includes("node_modules/lucide-react")) {
             return "vendor-icons";
           }

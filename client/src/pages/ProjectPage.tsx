@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { useRoute } from "wouter";
 import {
   Camera,
@@ -17,15 +17,24 @@ import { DashboardHeader } from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { classNames, daysLeft } from "@/lib/format";
-import ObjectDashboard from "@/components/project/ObjectDashboard";
-import ConstructionTimeline from "@/components/project/ConstructionTimeline";
-import ConstructionFeed from "@/components/project/ConstructionFeed";
-import StagePhotos from "@/components/project/StagePhotos";
-import CamerasPanel from "@/components/project/CamerasPanel";
-import ProjectDocuments from "@/components/project/ProjectDocuments";
-import ProjectChat from "@/components/project/ProjectChat";
-import AIAssistant from "@/components/project/AIAssistant";
-import ProjectTeam from "@/components/project/ProjectTeam";
+
+const ObjectDashboard = lazy(() => import("@/components/project/ObjectDashboard"));
+const ConstructionTimeline = lazy(() => import("@/components/project/ConstructionTimeline"));
+const ConstructionFeed = lazy(() => import("@/components/project/ConstructionFeed"));
+const StagePhotos = lazy(() => import("@/components/project/StagePhotos"));
+const CamerasPanel = lazy(() => import("@/components/project/CamerasPanel"));
+const ProjectDocuments = lazy(() => import("@/components/project/ProjectDocuments"));
+const ProjectChat = lazy(() => import("@/components/project/ProjectChat"));
+const AIAssistant = lazy(() => import("@/components/project/AIAssistant"));
+const ProjectTeam = lazy(() => import("@/components/project/ProjectTeam"));
+
+function PanelLoader() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center">
+      <div className="text-muted-foreground">Загрузка раздела…</div>
+    </div>
+  );
+}
 
 const tabs = [
   { value: "overview", label: "Обзор", icon: Sparkles },
@@ -136,54 +145,72 @@ export default function ProjectPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="pb-28">
           <TabsContent value="overview">
-            <ObjectDashboard
-              projectId={projectId}
-              setActiveTab={setActiveTab}
-            />
+            <Suspense fallback={<PanelLoader />}>
+              <ObjectDashboard
+                projectId={projectId}
+                setActiveTab={setActiveTab}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="timeline">
-            <ConstructionTimeline
-              projectId={projectId}
-              canEdit={canEdit}
-              canPlan={canPlan}
-            />
+            <Suspense fallback={<PanelLoader />}>
+              <ConstructionTimeline
+                projectId={projectId}
+                canEdit={canEdit}
+                canPlan={canPlan}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="feed">
-            <ConstructionFeed projectId={projectId} canEdit={canEdit} />
+            <Suspense fallback={<PanelLoader />}>
+              <ConstructionFeed projectId={projectId} canEdit={canEdit} />
+            </Suspense>
           </TabsContent>
           <TabsContent value="photos">
-            <StagePhotos
-              projectId={projectId}
-              canEdit={canEdit}
-              canPlan={canPlan}
-            />
+            <Suspense fallback={<PanelLoader />}>
+              <StagePhotos
+                projectId={projectId}
+                canEdit={canEdit}
+                canPlan={canPlan}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="cameras">
-            <CamerasPanel projectId={projectId} canPlan={canPlan} />
+            <Suspense fallback={<PanelLoader />}>
+              <CamerasPanel projectId={projectId} canPlan={canPlan} />
+            </Suspense>
           </TabsContent>
           <TabsContent value="documents">
-            <ProjectDocuments
-              projectId={projectId}
-              canEdit={canEdit}
-              canPlan={canPlan}
-            />
+            <Suspense fallback={<PanelLoader />}>
+              <ProjectDocuments
+                projectId={projectId}
+                canEdit={canEdit}
+                canPlan={canPlan}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="chat">
-            <ProjectChat
-              projectId={projectId}
-              projectName={p.name}
-              participants={participants}
-              isActive={activeTab === "chat"}
-            />
+            <Suspense fallback={<PanelLoader />}>
+              <ProjectChat
+                projectId={projectId}
+                projectName={p.name}
+                participants={participants}
+                isActive={activeTab === "chat"}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="team">
-            <ProjectTeam
-              projectId={projectId}
-              canManage={user?.role === "director"}
-            />
+            <Suspense fallback={<PanelLoader />}>
+              <ProjectTeam
+                projectId={projectId}
+                canManage={user?.role === "director"}
+              />
+            </Suspense>
           </TabsContent>
           <TabsContent value="ai">
-            <AIAssistant projectId={projectId} />
+            <Suspense fallback={<PanelLoader />}>
+              <AIAssistant projectId={projectId} />
+            </Suspense>
           </TabsContent>
         </div>
         <TabsList className="fixed bottom-0 left-0 right-0 z-40 flex h-auto w-full flex-nowrap overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:left-64">

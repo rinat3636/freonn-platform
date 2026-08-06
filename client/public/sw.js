@@ -23,6 +23,11 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
+  // Service Worker cannot fetch data:/blob:/chrome-extension: URLs.
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return;
+  }
+
   // Always go to the network for the shell so HTML updates are picked up.
   if (url.pathname === "/" || url.pathname.endsWith(".html")) {
     event.respondWith(

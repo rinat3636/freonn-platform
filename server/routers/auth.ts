@@ -11,6 +11,8 @@ import {
   createSessionToken,
   hashPassword,
   verifyPassword,
+  setSessionCookie,
+  clearSessionCookie,
 } from "../_core/auth";
 import { getDbOrThrow, omitPassword } from "./_shared";
 import { users } from "../../drizzle/schema";
@@ -38,7 +40,7 @@ export const authRouter = router({
     return user ? omitPassword(user) : null;
   }),
 
-  login: publicProcedure.input(loginInput).mutation(async ({ input }) => {
+  login: publicProcedure.input(loginInput).mutation(async ({ input, ctx }) => {
     const db = await getDbOrThrow();
     const [user] = await db
       .select()
@@ -69,10 +71,11 @@ export const authRouter = router({
       email: user.email,
       role: user.role,
     });
-    return { user: omitPassword(user), token };
+    setSessionCookie(ctx.res, token);
+    return { user: omitPassword(user) };
   }),
 
-  register: publicProcedure.input(registerInput).mutation(async ({ input }) => {
+  register: publicProcedure.input(registerInput).mutation(async ({ input, ctx }) => {
     const db = await getDbOrThrow();
     const existing = await db
       .select()
@@ -110,7 +113,13 @@ export const authRouter = router({
       email: user.email,
       role: user.role,
     });
-    return { user: omitPassword(user), token };
+    setSessionCookie(ctx.res, token);
+    return { user: omitPassword(user) };
+  }),
+
+  logout: publicProcedure.mutation(async ({ ctx }) => {
+    clearSessionCookie(ctx.res);
+    return { success: true };
   }),
 
   createUser: directorProcedure

@@ -11,7 +11,8 @@ import { ENV } from "./env";
 import { rateLimit } from "./rateLimit";
 import { applySecurityHeaders } from "./securityHeaders";
 import { serveStatic, setupVite } from "./vite";
-import { verifySessionToken } from "./auth";
+import { verifySessionToken, COOKIE_NAME } from "./auth";
+import { parse as parseCookie } from "cookie";
 import fs from "fs";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -69,14 +70,6 @@ async function startServer() {
 
   applySecurityHeaders(app);
 
-  // Disable HTTP keep-alive to avoid stale connections when combined with
-  // streaming middleware on this low-bandwidth host. Each request gets a fresh
-  // TCP connection, which matches how standalone `curl` clients succeed.
-  app.use((_req, res, next) => {
-    res.setHeader("Connection", "close");
-    next();
-  });
-
   const sendHealth = (_req: express.Request, res: express.Response) => {
     res.setHeader("Cache-Control", "no-store");
     res.json({ ok: true, env: process.env.NODE_ENV || "development" });
@@ -86,7 +79,10 @@ async function startServer() {
 
   const requireUploadAuth: express.RequestHandler = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+    const cookies = parseCookie(req.headers.cookie ?? "");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : cookies[COOKIE_NAME];
     if (!token) {
       res.status(401).json({ success: false, error: "Unauthorized" });
       return;
@@ -140,6 +136,8 @@ async function startServer() {
   server.listen(port, "0.0.0.0", () => {
     console.log(`[Freonn Platform] Server running on http://0.0.0.0:${port}`);
   });
+  server.keepAliveTimeout = 5000;
+  server.headersTimeout = 60000;
 }
 
 startServer().catch(e => {

@@ -1,30 +1,42 @@
+import { Suspense, lazy } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Route, Switch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
-import DashboardPage from "@/pages/DashboardPage";
 import LoginPage from "@/pages/LoginPage";
-import MapPage from "@/pages/MapPage";
-import NotificationsPage from "@/pages/NotificationsPage";
-import ProjectPage from "@/pages/ProjectPage";
-import UsersPage from "@/pages/UsersPage";
-import ProfilePage from "@/pages/ProfilePage";
+
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const MapPage = lazy(() => import("@/pages/MapPage"));
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const ProjectPage = lazy(() => import("@/pages/ProjectPage"));
+const UsersPage = lazy(() => import("@/pages/UsersPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-muted-foreground">Загрузка…</div>
+    </div>
+  );
+}
 
 function AppRouter() {
   return (
-    <Switch>
-      <Route path="/login" component={LoginPage} />
-      <Route path="/" component={DashboardPage} />
-      <Route path="/map" component={MapPage} />
-      <Route path="/notifications" component={NotificationsPage} />
-      <Route path="/users" component={UsersPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route path="/projects/:id" component={ProjectPage} />
-      <Route
-        component={() => (
-          <div className="p-8 text-center">Страница не найдена</div>
-        )}
-      />
-    </Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/login" component={LoginPage} />
+        <Route path="/" component={DashboardPage} />
+        <Route path="/map" component={MapPage} />
+        <Route path="/notifications" component={NotificationsPage} />
+        <Route path="/users" component={UsersPage} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route path="/projects/:id" component={ProjectPage} />
+        <Route
+          component={() => (
+            <div className="p-8 text-center">Страница не найдена</div>
+          )}
+        />
+      </Switch>
+    </Suspense>
   );
 }
 

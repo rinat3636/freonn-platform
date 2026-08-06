@@ -1,10 +1,13 @@
 import bcryptjs from "bcryptjs";
 import { jwtVerify } from "jose";
 import { createHmac } from "node:crypto";
+import { stringifySetCookie } from "cookie";
+import type { Response } from "express";
 import { ENV } from "./env";
 
 const JWT_ALGORITHM = "HS256";
 export const COOKIE_NAME = "app_session_id";
+export const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
 
 export type SessionPayload = {
   userId: number;
@@ -60,4 +63,28 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   } catch {
     return null;
   }
+}
+
+export function setSessionCookie(res: Response, token: string) {
+  res.setHeader(
+    "Set-Cookie",
+    stringifySetCookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      maxAge: COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+    })
+  );
+}
+
+export function clearSessionCookie(res: Response) {
+  res.setHeader(
+    "Set-Cookie",
+    stringifySetCookie(COOKIE_NAME, "", {
+      httpOnly: true,
+      maxAge: -1,
+      path: "/",
+      sameSite: "lax",
+    })
+  );
 }
