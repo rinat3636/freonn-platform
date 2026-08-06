@@ -1,11 +1,11 @@
-FROM alpine:3.20
+FROM mysql:8.0
 
-RUN apk add --no-cache mariadb-client bash tzdata
+RUN microdnf install -y cronie tar bash tzdata && microdnf clean all
 
 WORKDIR /app
 
 COPY backup.sh /usr/local/bin/backup.sh
-COPY crontab /etc/crontabs/root
+COPY crontab /var/spool/cron/root
 
 RUN chmod +x /usr/local/bin/backup.sh
 
