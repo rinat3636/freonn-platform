@@ -106,6 +106,9 @@ temp/
 *.sqlite
 *.sqlite3
 
+# User uploads (runtime only)
+uploads/
+
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 
