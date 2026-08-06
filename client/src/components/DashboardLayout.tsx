@@ -164,7 +164,13 @@ export default function DashboardLayout({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem disabled className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  <span className="capitalize">{user?.role}</span>
+                  <span>{user?.name}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    Профиль
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={logout}

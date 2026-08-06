@@ -31,7 +31,7 @@ async function resolveUser(req: CreateExpressContextOptions["req"]) {
   if (!db) return null;
 
   const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
-  return user ?? null;
+  return user?.isActive ? user : null;
 }
 
 export async function createContext(

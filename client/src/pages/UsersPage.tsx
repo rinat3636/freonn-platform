@@ -1,5 +1,14 @@
-import { useState } from "react";
-import { Loader2, Plus, ShieldCheck, UserRound, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Edit,
+  KeyRound,
+  Loader2,
+  Plus,
+  Power,
+  ShieldCheck,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -9,11 +18,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +49,8 @@ const roleLabels = {
   foreman: "Прораб",
   customer: "Заказчик",
 } as const;
+
+type Role = keyof typeof roleLabels;
 
 function initials(name: string) {
   return (
@@ -50,16 +71,32 @@ export default function UsersPage() {
     enabled: isDirector,
   });
   const utils = trpc.useUtils();
+  type DirectoryUser = NonNullable<typeof users.data>[number];
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"customer" | "foreman">("customer");
   const [password, setPassword] = useState("");
+  const [editingUser, setEditingUser] = useState<DirectoryUser | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editRole, setEditRole] = useState<Role>("customer");
+  const [passwordUser, setPasswordUser] = useState<DirectoryUser | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
 
+  useEffect(() => {
+    if (editingUser) {
+      setEditName(editingUser.name);
+      setEditPhone(editingUser.phone ?? "");
+      setEditRole(editingUser.role);
+    }
+  }, [editingUser]);
+
+  const refreshUsers = () => utils.auth.listUsers.invalidate();
   const createUser = trpc.auth.createUser.useMutation({
     onSuccess: async () => {
-      await utils.auth.listUsers.invalidate();
+      await refreshUsers();
       setOpen(false);
       setName("");
       setEmail("");
@@ -67,6 +104,31 @@ export default function UsersPage() {
       setRole("customer");
       setPassword("");
       toast.success("Пользователь создан");
+    },
+    onError: error => toast.error(error.message),
+  });
+  const updateUser = trpc.auth.updateUser.useMutation({
+    onSuccess: async () => {
+      await refreshUsers();
+      setEditingUser(null);
+      toast.success("Данные пользователя обновлены");
+    },
+    onError: error => toast.error(error.message),
+  });
+  const setUserActive = trpc.auth.setUserActive.useMutation({
+    onSuccess: async (_, input) => {
+      await refreshUsers();
+      toast.success(
+        input.isActive ? "Пользователь включён" : "Пользователь отключён"
+      );
+    },
+    onError: error => toast.error(error.message),
+  });
+  const resetUserPassword = trpc.auth.resetUserPassword.useMutation({
+    onSuccess: () => {
+      setPasswordUser(null);
+      setResetPassword("");
+      toast.success("Пароль пользователя сброшен");
     },
     onError: error => toast.error(error.message),
   });
@@ -87,7 +149,7 @@ export default function UsersPage() {
     );
   }
 
-  const submit = (event: React.FormEvent) => {
+  const submitCreate = (event: React.FormEvent) => {
     event.preventDefault();
     createUser.mutate({
       name,
@@ -98,50 +160,53 @@ export default function UsersPage() {
     });
   };
 
+  const submitEdit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingUser) return;
+    updateUser.mutate({
+      id: editingUser.id,
+      name: editName.trim(),
+      phone: editPhone.trim() || null,
+      role: editRole,
+    });
+  };
+
   return (
     <div>
       <DashboardHeader title="Команда">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Новый пользователь
-            </Button>
-          </DialogTrigger>
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Новый пользователь
+          </Button>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Новый пользователь</DialogTitle>
             </DialogHeader>
-            <form onSubmit={submit} className="mt-2 space-y-4">
+            <form onSubmit={submitCreate} className="mt-2 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="user-name">Имя</Label>
+                <Label>Имя</Label>
                 <Input
-                  id="user-name"
                   value={name}
                   onChange={event => setName(event.target.value)}
-                  placeholder="Имя пользователя"
                   required
                   minLength={2}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user-email">Email</Label>
+                <Label>Email</Label>
                 <Input
-                  id="user-email"
                   type="email"
                   value={email}
                   onChange={event => setEmail(event.target.value)}
-                  placeholder="name@example.com"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user-phone">Телефон</Label>
+                <Label>Телефон</Label>
                 <Input
-                  id="user-phone"
                   value={phone}
                   onChange={event => setPhone(event.target.value)}
-                  placeholder="+7 900 000-00-00"
                 />
               </div>
               <div className="space-y-2">
@@ -152,7 +217,7 @@ export default function UsersPage() {
                     setRole(value as "customer" | "foreman")
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -162,15 +227,13 @@ export default function UsersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user-password">Пароль</Label>
+                <Label>Пароль</Label>
                 <Input
-                  id="user-password"
                   type="password"
                   value={password}
                   onChange={event => setPassword(event.target.value)}
-                  placeholder="Минимум 6 символов"
-                  required
                   minLength={6}
+                  required
                 />
               </div>
               <Button
@@ -219,31 +282,161 @@ export default function UsersPage() {
                       Пользователей пока нет
                     </p>
                   ) : (
-                    roleUsers.map(item => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-3 rounded-xl border border-border/60 p-3"
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary/10 font-semibold text-primary">
-                            {initials(item.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">
-                            {item.name}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {item.email}
-                          </p>
-                          {item.phone && (
-                            <p className="truncate text-xs text-muted-foreground">
-                              {item.phone}
-                            </p>
-                          )}
+                    roleUsers.map(item => {
+                      const isCurrentUser = item.id === user?.id;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`rounded-xl border border-border/60 p-3 ${item.isActive ? "" : "opacity-60"}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                                {initials(item.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="truncate text-sm font-semibold">
+                                  {item.name}
+                                </p>
+                                {!item.isActive && (
+                                  <Badge variant="outline">Отключён</Badge>
+                                )}
+                              </div>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {item.email}
+                              </p>
+                              {item.phone && (
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {item.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingUser(item)}
+                            >
+                              <Edit className="mr-1.5 h-3.5 w-3.5" />
+                              Изменить
+                            </Button>
+                            {!isCurrentUser && (
+                              <Dialog
+                                open={passwordUser?.id === item.id}
+                                onOpenChange={open =>
+                                  !open && setPasswordUser(null)
+                                }
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setPasswordUser(item)}
+                                >
+                                  <KeyRound className="mr-1.5 h-3.5 w-3.5" />
+                                  Пароль
+                                </Button>
+                                <DialogContent className="sm:max-w-md">
+                                  <DialogHeader>
+                                    <DialogTitle>
+                                      Новый пароль: {item.name}
+                                    </DialogTitle>
+                                  </DialogHeader>
+                                  <form
+                                    className="space-y-4"
+                                    onSubmit={event => {
+                                      event.preventDefault();
+                                      resetUserPassword.mutate({
+                                        id: item.id,
+                                        password: resetPassword,
+                                      });
+                                    }}
+                                  >
+                                    <div className="space-y-2">
+                                      <Label>Новый пароль</Label>
+                                      <Input
+                                        type="password"
+                                        value={resetPassword}
+                                        onChange={event =>
+                                          setResetPassword(event.target.value)
+                                        }
+                                        minLength={6}
+                                        required
+                                      />
+                                    </div>
+                                    <Button
+                                      type="submit"
+                                      className="w-full"
+                                      disabled={resetUserPassword.isPending}
+                                    >
+                                      Сохранить пароль
+                                    </Button>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                            {!isCurrentUser && item.isActive && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive"
+                                  >
+                                    <Power className="mr-1.5 h-3.5 w-3.5" />
+                                    Отключить
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Отключить пользователя?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Пользователь «{item.name}» больше не
+                                      сможет войти в систему. История действий и
+                                      данные будут сохранены.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Отмена
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        setUserActive.mutate({
+                                          id: item.id,
+                                          isActive: false,
+                                        })
+                                      }
+                                    >
+                                      Отключить
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                            {!isCurrentUser && !item.isActive && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setUserActive.mutate({
+                                    id: item.id,
+                                    isActive: true,
+                                  })
+                                }
+                                disabled={setUserActive.isPending}
+                              >
+                                Включить
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </CardContent>
               </Card>
@@ -251,6 +444,66 @@ export default function UsersPage() {
           })}
         </div>
       )}
+
+      <Dialog
+        open={!!editingUser}
+        onOpenChange={open => !open && setEditingUser(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Редактировать пользователя</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <form className="space-y-4" onSubmit={submitEdit}>
+              <div className="space-y-2">
+                <Label>Имя</Label>
+                <Input
+                  value={editName}
+                  onChange={event => setEditName(event.target.value)}
+                  minLength={2}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Телефон</Label>
+                <Input
+                  value={editPhone}
+                  onChange={event => setEditPhone(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Роль</Label>
+                {editingUser.id === user?.id ? (
+                  <Badge variant="outline">
+                    {roleLabels[editingUser.role]}
+                  </Badge>
+                ) : (
+                  <Select
+                    value={editRole}
+                    onValueChange={value => setEditRole(value as Role)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="director">Директор</SelectItem>
+                      <SelectItem value="foreman">Прораб</SelectItem>
+                      <SelectItem value="customer">Заказчик</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={updateUser.isPending}
+              >
+                Сохранить изменения
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
