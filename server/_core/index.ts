@@ -135,8 +135,9 @@ async function startServer() {
     console.log(`[Freonn Platform] Server running on http://0.0.0.0:${port}`);
     startRecorderJobs();
   });
-  server.keepAliveTimeout = 5000;
-  server.headersTimeout = 60000;
+  server.keepAliveTimeout = 0;
+  server.headersTimeout = 0;
+
 }
 
 startServer().catch(e => {
