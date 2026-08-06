@@ -92,7 +92,7 @@ export default function MapPage() {
   }, [projects.data, search]);
 
   return (
-    <div className="relative -mx-4 -mt-4 min-h-[480px] h-[calc(100vh-64px-64px)] bg-muted/30 pb-[env(safe-area-inset-bottom)] md:-mx-6 md:-mt-6 lg:h-[calc(100vh-64px)] z-0">
+    <div className="relative -mx-4 -mt-4 min-h-[480px] h-[calc(100vh-64px-64px-env(safe-area-inset-bottom))] bg-muted/30 md:-mx-6 md:-mt-6 lg:h-[calc(100vh-64px)] z-0">
       {projects.isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-[500] bg-background/60">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -207,7 +207,7 @@ export default function MapPage() {
         <MapViewport positions={positions} selectedId={selectedId} />
         <TileLayer
           attribution=""
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
         />
         {projects.data?.map(p => (
           <ProjectMarker

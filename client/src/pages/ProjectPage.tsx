@@ -214,16 +214,16 @@ export default function ProjectPage() {
           </TabsContent>
         </div>
         <TabsList className="fixed bottom-0 left-0 right-0 z-40 flex h-auto w-full flex-nowrap justify-start overflow-x-auto rounded-t-2xl border-t border-border/60 bg-card/95 p-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-18px_rgba(16,18,25,0.35)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center lg:left-64">
-          <div className="flex min-w-max gap-1 px-1 sm:px-0">
+          <div className="flex min-w-max gap-0.5 px-1 sm:gap-1 sm:px-0">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="min-w-[3.25rem] shrink-0 flex-col gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary sm:min-w-[4.75rem] sm:px-3 sm:text-[11px]"
+                  className="min-w-[2.5rem] shrink-0 flex-col gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary sm:min-w-[3.75rem] sm:gap-1 sm:px-2 sm:py-2 sm:text-[11px]"
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span className="hidden sm:inline">{tab.label}</span>
                 </TabsTrigger>
               );
