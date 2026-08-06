@@ -15,6 +15,17 @@ import { HlsPlayer } from "@/components/HlsPlayer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -74,7 +85,8 @@ export default function CamerasPanel({
   const [slide, setSlide] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const snaps = snapshots.data ?? [];
-  const renderCamera = (cam: any) => (
+  type CameraItem = NonNullable<typeof cameras.data>[number];
+  const renderCamera = (cam: CameraItem) => (
     <Card
       key={cam.id}
       className="overflow-hidden rounded-2xl border border-border/50 shadow-sm"
@@ -98,15 +110,35 @@ export default function CamerasPanel({
         )}
         <div className="mt-3 flex justify-end">
           {canPlan && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive"
-              onClick={() => remove.mutate({ id: cam.id })}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Удалить камеру</span>
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Удалить камеру</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Удалить камеру?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Камера «{cam.name}» будет удалена, а её архив и снимки
+                    больше не будут доступны.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => remove.mutate({ id: cam.id })}
+                  >
+                    Удалить
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           <Button
             variant="ghost"
