@@ -47,9 +47,6 @@ export default function LoginPage() {
     const name =
       (form.elements.namedItem("name") as HTMLInputElement)?.value.trim() ||
       email;
-    const role = ((form.elements.namedItem("role") as HTMLSelectElement)
-      ?.value || "customer") as any;
-
     if (!email || !password) return toast.error("Введите email и пароль");
     if (tab === "register" && !name) return toast.error("Введите имя");
     if (password.length < 6)
@@ -58,7 +55,7 @@ export default function LoginPage() {
     if (tab === "login") {
       login.mutate({ email, password });
     } else {
-      register.mutate({ email, password, name, role });
+      register.mutate({ email, password, name });
     }
   };
 
@@ -119,19 +116,6 @@ export default function LoginPage() {
                       autoComplete="name"
                       placeholder="Иван Петров"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Роль</Label>
-                    <select
-                      id="role"
-                      name="role"
-                      defaultValue="customer"
-                      className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-ring focus:outline-none transition-shadow"
-                    >
-                      <option value="customer">Заказчик</option>
-                      <option value="foreman">Прораб</option>
-                      <option value="director">Директор</option>
-                    </select>
                   </div>
                 </TabsContent>
                 <Button type="submit" className="w-full" disabled={loading}>
