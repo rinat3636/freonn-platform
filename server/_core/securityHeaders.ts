@@ -30,7 +30,7 @@ function csp(): string {
     `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://mc.yandex.ru https://yastatic.net`,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `font-src 'self' https://fonts.gstatic.com`,
-    `img-src 'self' data: https://www.googletagmanager.com https://*.google-analytics.com https://mc.yandex.ru https://*.yandex.ru https://yastatic.net`,
+    `img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com https://mc.yandex.ru https://*.yandex.ru https://yastatic.net https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.basemaps.cartocdn.com`,
     `connect-src ${connect}`,
     `media-src 'self'`,
     `object-src 'none'`,
