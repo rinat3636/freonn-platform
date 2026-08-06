@@ -124,10 +124,14 @@ export default function ProjectPage() {
             />
           </TabsContent>
           <TabsContent value="cameras">
-            <CamerasPanel projectId={projectId} canEdit={canEdit} />
+            <CamerasPanel projectId={projectId} canPlan={canPlan} />
           </TabsContent>
           <TabsContent value="documents">
-            <ProjectDocuments projectId={projectId} canEdit={canEdit} />
+            <ProjectDocuments
+              projectId={projectId}
+              canEdit={canEdit}
+              canPlan={canPlan}
+            />
           </TabsContent>
           <TabsContent value="chat">
             <ProjectChat projectId={projectId} />

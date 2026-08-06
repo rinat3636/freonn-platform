@@ -1,10 +1,27 @@
 import { useRef, useState } from "react";
-import { Download, FileText, Loader2, Upload } from "lucide-react";
+import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { uploadFile } from "@/lib/upload";
 import { formatBytes, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -24,9 +41,11 @@ const categories: Record<string, string> = {
 export default function ProjectDocuments({
   projectId,
   canEdit,
+  canPlan,
 }: {
   projectId: number;
   canEdit: boolean;
+  canPlan: boolean;
 }) {
   const docs = trpc.content.documentsList.useQuery({ projectId });
   const create = trpc.content.documentCreate.useMutation({
@@ -37,6 +56,15 @@ export default function ProjectDocuments({
   const [category, setCategory] = useState("other");
   const [filter, setFilter] = useState("all");
   const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<any>(null);
+  const remove = trpc.content.documentDelete.useMutation({
+    onSuccess: () => {
+      docs.refetch();
+      setPreview(null);
+      toast.success("Документ удалён");
+    },
+    onError: e => toast.error(e.message),
+  });
   const filtered = (docs.data ?? []).filter(
     doc => filter === "all" || doc.category === filter
   );
@@ -115,7 +143,8 @@ export default function ProjectDocuments({
         {filtered.map(doc => (
           <Card
             key={doc.id}
-            className="rounded-2xl border border-border/50 shadow-sm"
+            className="cursor-pointer rounded-2xl border border-border/50 shadow-sm transition hover:border-primary/40"
+            onClick={() => setPreview(doc)}
           >
             <CardContent className="flex items-center justify-between gap-4 p-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -130,11 +159,50 @@ export default function ProjectDocuments({
                   </div>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" asChild>
-                <a href={doc.url} target="_blank" rel="noreferrer">
-                  <Download className="h-4 w-4" />
-                </a>
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                  onClick={event => event.stopPropagation()}
+                >
+                  <a href={doc.url} target="_blank" rel="noreferrer">
+                    <Download className="h-4 w-4" />
+                  </a>
+                </Button>
+                {canPlan && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={event => event.stopPropagation()}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Удалить документ</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Удалить документ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Документ «{doc.name}» будет удалён без возможности
+                          восстановления.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => remove.mutate({ id: doc.id })}
+                        >
+                          Удалить
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -144,6 +212,43 @@ export default function ProjectDocuments({
           Документы не найдены
         </div>
       )}
+      <Dialog open={!!preview} onOpenChange={open => !open && setPreview(null)}>
+        <DialogContent className="max-w-5xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{preview?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-[20rem] overflow-hidden rounded-xl bg-muted/30">
+            {preview?.mimeType?.startsWith("image/") ? (
+              <img
+                src={preview.url}
+                alt={preview.name}
+                className="mx-auto max-h-[65vh] max-w-full object-contain"
+              />
+            ) : preview?.mimeType === "application/pdf" ? (
+              <iframe
+                src={preview.url}
+                title={preview.name}
+                className="h-[65vh] w-full border-0"
+              />
+            ) : (
+              <div className="flex min-h-[20rem] flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
+                <FileText className="h-10 w-10" />
+                Предпросмотр недоступен для этого типа файла
+              </div>
+            )}
+          </div>
+          {preview && (
+            <div className="flex justify-end">
+              <Button asChild>
+                <a href={preview.url} target="_blank" rel="noreferrer">
+                  <Download className="mr-2 h-4 w-4" />
+                  Скачать
+                </a>
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
