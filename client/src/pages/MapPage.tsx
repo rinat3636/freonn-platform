@@ -92,13 +92,13 @@ export default function MapPage() {
   }, [projects.data, search]);
 
   return (
-    <div className="relative -mx-4 -mt-4 min-h-[480px] h-[calc(100vh-64px)] bg-muted/30 md:-mx-6 md:-mt-6">
+    <div className="relative -mx-4 -mt-4 min-h-[480px] h-[calc(100vh-64px-64px)] bg-muted/30 pb-[env(safe-area-inset-bottom)] md:-mx-6 md:-mt-6 lg:h-[calc(100vh-64px)] z-0">
       {projects.isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-[500] bg-background/60">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
-      <div className="absolute left-1/2 top-4 z-[500] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 md:left-auto md:right-4 md:w-80 md:translate-x-0">
+      <div className="absolute right-4 top-4 z-[500] w-56 -translate-x-0 md:left-auto md:w-80">
         <button
           type="button"
           className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-card/95 px-4 py-3 text-left text-sm font-semibold shadow-lg backdrop-blur-xl md:hidden"

@@ -441,7 +441,12 @@ export default function DashboardPage() {
             {search ? "Ничего не найдено" : "Нет доступных объектов"}
           </p>
           {isDirector && !search && (
-            <p className="text-sm mt-1">Создайте первый объект, чтобы начать</p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <p className="text-sm">Создайте первый объект, чтобы начать</p>
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Создать объект
+              </Button>
+            </div>
           )}
         </div>
       )}

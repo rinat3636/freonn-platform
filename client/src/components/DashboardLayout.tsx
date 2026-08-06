@@ -36,8 +36,9 @@ function asideClass(mobileOpen: boolean) {
   );
 }
 
-function mainClass(isMap: boolean) {
-  if (isMap) return "flex-1 w-full pb-16 lg:pb-0";
+function mainClass(isMap: boolean, isProject: boolean) {
+  if (isMap) return "flex-1 w-full overflow-hidden";
+  if (isProject) return "flex-1 w-full p-4 md:p-6 max-w-7xl mx-auto";
   return "flex-1 w-full p-4 md:p-6 pb-20 lg:pb-6 max-w-7xl mx-auto";
 }
 
@@ -78,6 +79,7 @@ export default function DashboardLayout({
   const { user, logout } = useAuth();
   const [location] = useLocation();
   const isMap = location === "/map";
+  const isProject = location.startsWith("/projects/");
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav =
     user?.role === "director"
@@ -211,8 +213,8 @@ export default function DashboardLayout({
             </DropdownMenu>
           </div>
         </header>
-        <main className={mainClass(isMap)}>{children}</main>
-        <MobileBottomNav nav={nav} />
+        <main className={mainClass(isMap, isProject)}>{children}</main>
+        {!isProject && <MobileBottomNav nav={nav} />}
       </div>
     </div>
   );
