@@ -1,13 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import * as L from "leaflet";
 import { trpc } from "@/lib/trpc";
 import { HlsPlayer } from "@/components/HlsPlayer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Camera, MapPin, Loader2, ExternalLink } from "lucide-react";
+import {
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Search,
+} from "lucide-react";
 import { Link } from "wouter";
 import MapViewport from "@/components/MapViewport";
+import { Input } from "@/components/ui/input";
 import "leaflet/dist/leaflet.css";
 
 const statusLabels: Record<string, string> = {
@@ -55,6 +64,9 @@ function daysLeft(end: Date | string | null | undefined): string {
 export default function MapPage() {
   const projects = trpc.projects.list.useQuery();
   const [openId, setOpenId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [listOpen, setListOpen] = useState(false);
   const [positions, setPositions] = useState<Record<number, [number, number]>>(
     {}
   );
@@ -69,6 +81,15 @@ export default function MapPage() {
     },
     []
   );
+  const filteredProjects = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return projects.data ?? [];
+    return (projects.data ?? []).filter(
+      project =>
+        project.name.toLowerCase().includes(query) ||
+        (project.address ?? "").toLowerCase().includes(query)
+    );
+  }, [projects.data, search]);
 
   return (
     <div className="relative -mx-4 -mt-4 min-h-[480px] h-[calc(100vh-64px)] bg-muted/30 md:-mx-6 md:-mt-6">
@@ -77,6 +98,104 @@ export default function MapPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
+      <div className="absolute left-1/2 top-4 z-[500] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 md:left-auto md:right-4 md:w-80 md:translate-x-0">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between rounded-2xl border border-border/60 bg-card/95 px-4 py-3 text-left text-sm font-semibold shadow-lg backdrop-blur-xl md:hidden"
+          onClick={() => setListOpen(current => !current)}
+          aria-expanded={listOpen}
+        >
+          Объекты ({projects.data?.length ?? 0})
+          {listOpen ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        <div
+          className={`mt-2 overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-lg backdrop-blur-xl ${
+            listOpen ? "block" : "hidden"
+          } md:block`}
+        >
+          <div className="border-b border-border/60 p-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                placeholder="Поиск объектов…"
+                className="h-10 rounded-xl border-border/60 bg-background pl-9"
+              />
+            </div>
+          </div>
+          <div className="max-h-[min(55vh,26rem)] overflow-y-auto p-2">
+            {projects.isLoading ? (
+              <div className="flex items-center justify-center gap-2 p-5 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Загрузка объектов…
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="p-5 text-center text-sm text-muted-foreground">
+                Объекты не найдены
+              </div>
+            ) : (
+              filteredProjects.map(project => {
+                const position = positions[project.id];
+                const hasPosition = !!position;
+                const isSelected = selectedId === project.id;
+                return (
+                  <button
+                    key={project.id}
+                    type="button"
+                    disabled={!hasPosition}
+                    onClick={() => {
+                      if (!hasPosition) return;
+                      setSelectedId(project.id);
+                      setOpenId(project.id);
+                      setListOpen(false);
+                    }}
+                    className={`group flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
+                      hasPosition
+                        ? "hover:bg-accent"
+                        : "cursor-not-allowed opacity-50"
+                    } ${isSelected ? "bg-primary/10" : ""}`}
+                  >
+                    <span
+                      className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor:
+                          statusPinColors[project.status] ?? "#ED1C24",
+                      }}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        {project.name}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        {project.address || "Адрес не указан"}
+                      </span>
+                      <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                            statusBadgeColors[project.status] ?? "bg-muted"
+                          }`}
+                        >
+                          {statusLabels[project.status] ?? project.status}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {hasPosition
+                            ? daysLeft(project.plannedEndDate)
+                            : "нет координат"}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
       <MapContainer
         center={[55.7558, 37.6173]}
         zoom={10}
@@ -84,7 +203,7 @@ export default function MapPage() {
         className="h-full min-h-[480px] w-full"
         scrollWheelZoom
       >
-        <MapViewport positions={positions} />
+        <MapViewport positions={positions} selectedId={selectedId} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -94,6 +213,7 @@ export default function MapPage() {
             key={p.id}
             project={p}
             isOpen={openId === p.id}
+            isSelected={selectedId === p.id}
             onOpen={() => setOpenId(p.id)}
             onClose={() => setOpenId(null)}
             onPosition={setPosition}
@@ -107,16 +227,19 @@ export default function MapPage() {
 function ProjectMarker({
   project,
   isOpen,
+  isSelected,
   onOpen,
   onClose,
   onPosition,
 }: {
   project: any;
   isOpen: boolean;
+  isSelected: boolean;
   onOpen: () => void;
   onClose: () => void;
   onPosition: (projectId: number, position: [number, number]) => void;
 }) {
+  const markerRef = useRef<L.Marker | null>(null);
   const { data: geocoded } = trpc.projects.geocode.useQuery(
     { address: project.address ?? "" },
     {
@@ -135,10 +258,15 @@ function ProjectMarker({
     if (lat != null && lng != null) onPosition(project.id, [lat, lng]);
   }, [lat, lng, onPosition, project.id]);
 
+  useEffect(() => {
+    if (isSelected) markerRef.current?.openPopup();
+  }, [isSelected]);
+
   if (lat == null || lng == null) return null;
 
   return (
     <Marker
+      ref={markerRef}
       position={[lat, lng]}
       icon={pinIcon(project.status)}
       eventHandlers={{ click: onOpen, popupclose: onClose }}
