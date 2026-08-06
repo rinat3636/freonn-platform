@@ -1,4 +1,4 @@
-const CACHE_NAME = "freonn-platform-v3";
+const CACHE_NAME = "freonn-platform-v4";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -25,6 +25,12 @@ self.addEventListener("fetch", (event) => {
 
   // Service Worker cannot fetch data:/blob:/chrome-extension: URLs.
   if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return;
+  }
+
+  // Don't intercept cross-origin requests (e.g. map tiles) because the browser
+  // handles no-cors opaque responses for images better than a manual fetch.
+  if (url.origin !== self.location.origin) {
     return;
   }
 
