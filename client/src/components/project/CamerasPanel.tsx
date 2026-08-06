@@ -34,31 +34,35 @@ import { toast } from "sonner";
 
 export default function CamerasPanel({
   projectId,
-  canEdit,
+  canPlan,
 }: {
   projectId: number;
-  canEdit: boolean;
+  canPlan: boolean;
 }) {
   const cameras = trpc.cameras.list.useQuery({ projectId });
   const create = trpc.cameras.create.useMutation({
     onSuccess: () => cameras.refetch(),
     onError: e => toast.error(e.message),
   });
+  const [selected, setSelected] = useState<string>("all");
   const remove = trpc.cameras.delete.useMutation({
-    onSuccess: () => cameras.refetch(),
+    onSuccess: () => {
+      cameras.refetch();
+      setSelected("all");
+    },
     onError: e => toast.error(e.message),
   });
   const snapshot = trpc.cameras.createSnapshot.useMutation({
     onSuccess: () => toast.success("Снимок сохранен"),
     onError: e => toast.error(e.message),
   });
-  const [selected, setSelected] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const camera =
-    cameras.data?.find(item => String(item.id) === selected) ||
-    cameras.data?.[0];
+    selected === "all"
+      ? undefined
+      : cameras.data?.find(item => String(item.id) === selected);
   const recordings = trpc.cameras.recordings.useQuery(
     { cameraId: camera?.id ?? 0 },
     { enabled: !!camera }
@@ -70,6 +74,52 @@ export default function CamerasPanel({
   const [slide, setSlide] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const snaps = snapshots.data ?? [];
+  const renderCamera = (cam: any) => (
+    <Card
+      key={cam.id}
+      className="overflow-hidden rounded-2xl border border-border/50 shadow-sm"
+    >
+      <CardHeader className="flex flex-row items-center justify-between py-4">
+        <CardTitle className="text-base">{cam.name}</CardTitle>
+        <div
+          className={`h-2.5 w-2.5 rounded-full ${cam.status === "online" ? "bg-emerald-500" : "bg-slate-300"}`}
+        />
+      </CardHeader>
+      <CardContent>
+        {cam.hlsUrl ? (
+          <HlsPlayer
+            src={cam.hlsUrl}
+            className="aspect-video rounded-xl bg-black"
+          />
+        ) : (
+          <div className="flex aspect-video items-center justify-center rounded-xl bg-muted text-muted-foreground">
+            <Camera />
+          </div>
+        )}
+        <div className="mt-3 flex justify-end">
+          {canPlan && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={() => remove.mutate({ id: cam.id })}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Удалить камеру</span>
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => snapshot.mutate({ cameraId: cam.id })}
+          >
+            <Aperture className="h-4 w-4" />
+            <span className="sr-only">Сделать снимок</span>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
   useEffect(() => {
     if (!slide || !snaps.length) return;
     const timer = window.setInterval(
@@ -81,18 +131,19 @@ export default function CamerasPanel({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap justify-between gap-3">
-        {canEdit && (
+        {canPlan && (
           <Button onClick={() => setOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Добавить камеру
           </Button>
         )}
-        {camera && (
-          <Select value={String(camera.id)} onValueChange={setSelected}>
+        {cameras.data?.length ? (
+          <Select value={selected} onValueChange={setSelected}>
             <SelectTrigger className="w-56">
               <SelectValue placeholder="Выберите камеру" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Все камеры</SelectItem>
               {(cameras.data ?? []).map(cam => (
                 <SelectItem key={cam.id} value={String(cam.id)}>
                   {cam.name}
@@ -100,7 +151,7 @@ export default function CamerasPanel({
               ))}
             </SelectContent>
           </Select>
-        )}
+        ) : null}
       </div>
       <Tabs defaultValue="live">
         <TabsList>
@@ -109,121 +160,105 @@ export default function CamerasPanel({
           <TabsTrigger value="snapshots">Снимки / Таймлапс</TabsTrigger>
         </TabsList>
         <TabsContent value="live" className="mt-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {(cameras.data ?? []).map(cam => (
-              <Card
-                key={cam.id}
-                className="overflow-hidden rounded-2xl border border-border/50 shadow-sm"
-              >
-                <CardHeader className="flex flex-row items-center justify-between py-4">
-                  <CardTitle className="text-base">{cam.name}</CardTitle>
-                  <div
-                    className={`h-2.5 w-2.5 rounded-full ${cam.status === "online" ? "bg-emerald-500" : "bg-slate-300"}`}
-                  />
-                </CardHeader>
-                <CardContent>
-                  {cam.hlsUrl ? (
-                    <HlsPlayer
-                      src={cam.hlsUrl}
-                      className="aspect-video rounded-xl bg-black"
-                    />
-                  ) : (
-                    <div className="flex aspect-video items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                      <Camera />
-                    </div>
-                  )}
-                  <div className="mt-3 flex justify-end">
-                    {canEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => remove.mutate({ id: cam.id })}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => snapshot.mutate({ cameraId: cam.id })}
-                    >
-                      <Aperture className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          {!cameras.data?.length && (
-            <div className="py-16 text-center text-muted-foreground">
-              Камеры еще не добавлены
+          {!cameras.data?.length ? (
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+              <Camera className="mx-auto mb-3 h-10 w-10" />
+              <p className="font-medium">Камеры ещё не добавлены</p>
+              <p className="mt-1 text-sm">Камеры добавляет директор проекта.</p>
+            </div>
+          ) : (
+            <div
+              className={
+                selected === "all" ? "grid gap-4 md:grid-cols-2" : "max-w-4xl"
+              }
+            >
+              {selected === "all"
+                ? cameras.data.map(renderCamera)
+                : camera && renderCamera(camera)}
             </div>
           )}
         </TabsContent>
         <TabsContent value="archive" className="mt-4">
-          {recordings.data?.length ? (
-            <div className="space-y-2">
-              {recordings.data.map(item => (
-                <Card
-                  key={item.id}
-                  className="rounded-xl border border-border/50"
-                >
-                  <CardContent className="flex items-center justify-between p-4">
-                    <span>
-                      {formatDate(item.startedAt)} ·{" "}
-                      {new Date(item.startedAt).toLocaleTimeString("ru-RU")}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {item.durationSec
-                        ? `${Math.round(item.durationSec / 60)} мин.`
-                        : "—"}
-                    </span>
-                  </CardContent>
-                </Card>
-              ))}
+          {!camera ? (
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+              Выберите камеру, чтобы посмотреть архив
             </div>
           ) : (
-            <div className="py-16 text-center text-muted-foreground">
-              Записей архива нет
+            <div className="space-y-2">
+              <h3 className="mb-3 text-lg font-semibold">{camera.name}</h3>
+              {recordings.data?.length ? (
+                recordings.data.map(item => (
+                  <Card
+                    key={item.id}
+                    className="rounded-xl border border-border/50"
+                  >
+                    <CardContent className="flex items-center justify-between p-4">
+                      <span>
+                        {formatDate(item.startedAt)} ·{" "}
+                        {new Date(item.startedAt).toLocaleTimeString("ru-RU")}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {item.durationSec
+                          ? `${Math.round(item.durationSec / 60)} мин.`
+                          : "—"}
+                      </span>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="py-16 text-center text-muted-foreground">
+                  Записей архива нет
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
         <TabsContent value="snapshots" className="mt-4">
-          <div className="mb-4 flex gap-2">
-            <Button
-              disabled={!camera || snapshot.isPending}
-              onClick={() => camera && snapshot.mutate({ cameraId: camera.id })}
-            >
-              <Aperture className="mr-2 h-4 w-4" />
-              Сделать снимок
-            </Button>
-            <Button
-              variant="outline"
-              disabled={!snaps.length}
-              onClick={() => {
-                setSlideIndex(0);
-                setSlide(true);
-              }}
-            >
-              <CirclePlay className="mr-2 h-4 w-4" />
-              Таймлапс
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {snaps.map(item => (
-              <img
-                key={item.id}
-                src={item.imageUrl}
-                className="aspect-square rounded-xl object-cover"
-                alt=""
-              />
-            ))}
-          </div>
-          {!snaps.length && (
-            <div className="py-16 text-center text-muted-foreground">
-              Снимков пока нет
+          {!camera ? (
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+              Выберите камеру, чтобы посмотреть снимки и таймлапс
             </div>
+          ) : (
+            <>
+              <h3 className="mb-3 text-lg font-semibold">{camera.name}</h3>
+              <div className="mb-4 flex gap-2">
+                <Button
+                  disabled={!camera || snapshot.isPending}
+                  onClick={() =>
+                    camera && snapshot.mutate({ cameraId: camera.id })
+                  }
+                >
+                  <Aperture className="mr-2 h-4 w-4" />
+                  Сделать снимок
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={!snaps.length}
+                  onClick={() => {
+                    setSlideIndex(0);
+                    setSlide(true);
+                  }}
+                >
+                  <CirclePlay className="mr-2 h-4 w-4" />
+                  Таймлапс
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {snaps.map(item => (
+                  <img
+                    key={item.id}
+                    src={item.imageUrl}
+                    className="aspect-square rounded-xl object-cover"
+                    alt=""
+                  />
+                ))}
+              </div>
+              {!snaps.length && (
+                <div className="py-16 text-center text-muted-foreground">
+                  Снимков пока нет
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
