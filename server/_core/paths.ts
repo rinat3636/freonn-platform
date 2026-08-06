@@ -1,8 +1,10 @@
 import path from "node:path";
+import fs from "node:fs";
 import { ENV } from "./env";
 
 export function getUploadDir(): string {
   const dir = path.resolve(process.cwd(), ENV.uploadDir);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
