@@ -373,43 +373,43 @@ export default function DashboardPage() {
         )}
       </DashboardHeader>
 
-      <div className="mb-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-8 grid grid-cols-3 gap-3 sm:gap-5">
         <Card className="app-elevated rounded-2xl border border-border/50">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Building2 className="h-5 w-5" />
+          <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-12 sm:w-12 sm:rounded-2xl">
+              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <div className="text-2xl font-extrabold">
+            <div className="text-center sm:text-left">
+              <div className="text-xl font-extrabold sm:text-2xl">
                 {projects.data?.length ?? 0}
               </div>
-              <div className="text-sm text-muted-foreground font-medium">
-                Всего объектов
+              <div className="text-[10px] font-medium text-muted-foreground sm:text-sm">
+                Всего
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="app-elevated rounded-2xl border border-border/50">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-              <ArrowUpRight className="h-5 w-5" />
+          <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 sm:h-12 sm:w-12 sm:rounded-2xl">
+              <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <div className="text-2xl font-extrabold">{activeCount}</div>
-              <div className="text-sm text-muted-foreground font-medium">
+            <div className="text-center sm:text-left">
+              <div className="text-xl font-extrabold sm:text-2xl">{activeCount}</div>
+              <div className="text-[10px] font-medium text-muted-foreground sm:text-sm">
                 Активных
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="app-elevated rounded-2xl border border-border/50 sm:col-span-2 lg:col-span-1">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-              <Calendar className="h-5 w-5" />
+        <Card className="app-elevated rounded-2xl border border-border/50">
+          <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/10 text-destructive sm:h-12 sm:w-12 sm:rounded-2xl">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <div className="text-2xl font-extrabold">{overdueCount}</div>
-              <div className="text-sm text-muted-foreground font-medium">
+            <div className="text-center sm:text-left">
+              <div className="text-xl font-extrabold sm:text-2xl">{overdueCount}</div>
+              <div className="text-[10px] font-medium text-muted-foreground sm:text-sm">
                 Просрочено
               </div>
             </div>

@@ -43,7 +43,7 @@ root.render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
       <App onReady={hideSplash} />
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="bottom-right" className="!bottom-16" />
     </QueryClientProvider>
   </trpc.Provider>
 );
