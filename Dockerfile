@@ -14,6 +14,8 @@ RUN pnpm build
 FROM node:22-slim AS runner
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
 
 ENV NODE_ENV=production

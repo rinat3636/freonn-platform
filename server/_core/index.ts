@@ -13,6 +13,8 @@ import { applySecurityHeaders } from "./securityHeaders";
 import { serveStatic, setupVite } from "./vite";
 import { verifySessionToken, COOKIE_NAME } from "./auth";
 import { parse as parseCookie } from "cookie";
+import { getUploadDir } from "./paths";
+import { startRecorderJobs } from "../jobs/recorder";
 import fs from "fs";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -32,11 +34,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-export function getUploadDir(): string {
-  const dir = path.resolve(process.cwd(), ENV.uploadDir);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
+export { getUploadDir };
 
 function resolveBaseUrl(req: express.Request): string {
   const configured = (process.env.APP_PUBLIC_URL || "").replace(/\/+$/, "");
@@ -135,6 +133,7 @@ async function startServer() {
   const port = await findAvailablePort(preferredPort);
   server.listen(port, "0.0.0.0", () => {
     console.log(`[Freonn Platform] Server running on http://0.0.0.0:${port}`);
+    startRecorderJobs();
   });
   server.keepAliveTimeout = 5000;
   server.headersTimeout = 60000;

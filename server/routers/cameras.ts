@@ -2,10 +2,14 @@ import { z } from "zod";
 import { eq, desc } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm/table";
 import { TRPCError } from "@trpc/server";
+import fs from "node:fs";
+import path from "node:path";
 import { protectedProcedure, router } from "../_core/trpc";
 import { cameras, cameraRecordings, cameraSnapshots } from "../../drizzle/schema";
 import { getDbOrThrow, logActivity, requireProjectAccess } from "./_shared";
 import { ENV } from "../_core/env";
+import { getSnapshotDir, getRecordingDir } from "../_core/paths";
+import { buildTimelapse } from "../jobs/recorder";
 
 type Camera = InferSelectModel<typeof cameras>;
 
@@ -124,7 +128,10 @@ export const camerasRouter = router({
       .where(eq(cameraRecordings.cameraId, input.cameraId))
       .orderBy(desc(cameraRecordings.startedAt))
       .limit(100);
-    return rows;
+    return rows.map((r) => ({
+      ...r,
+      url: `/uploads/recordings/${cam.id}/${r.segmentPath}`,
+    }));
   }),
 
   snapshots: protectedProcedure.input(z.object({ cameraId: z.number().int() })).query(async ({ ctx, input }) => {
@@ -149,11 +156,24 @@ export const camerasRouter = router({
 
     const streamPath = getStreamPath(cam);
     const base = ENV.go2rtcApiUrl.replace(/\/$/, "");
-    const imageUrl = `${base}/api/frame.jpeg?src=${encodeURIComponent(streamPath)}`;
+    const frameUrl = `${base}/api/frame.jpeg?src=${encodeURIComponent(streamPath)}`;
+
+    const res = await fetch(frameUrl);
+    if (!res.ok) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Не удалось получить кадр с камеры" });
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const dir = getSnapshotDir(cam.id);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const now = new Date();
+    const fileName = `${now.toISOString().replace(/[:.]/g, "-")}.jpg`;
+    const filePath = path.join(dir, fileName);
+    fs.writeFileSync(filePath, buffer);
+    const imageUrl = `/uploads/snapshots/${cam.id}/${fileName}`;
 
     const result = await db.insert(cameraSnapshots).values({
       cameraId: input.cameraId,
-      takenAt: new Date(),
+      takenAt: now,
       imageUrl,
       triggeredBy: "user",
     });
@@ -161,4 +181,26 @@ export const camerasRouter = router({
     await logActivity(db, cam.projectId, ctx.user.id, "CAMERA_SNAPSHOT", "cameraSnapshot", snapshotId);
     return { id: snapshotId, imageUrl };
   }),
+
+  createTimelapse: protectedProcedure
+    .input(
+      z.object({
+        cameraId: z.number().int(),
+        start: z.string().datetime(),
+        end: z.string().datetime(),
+        fps: z.number().int().default(10),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDbOrThrow();
+      const [cam] = await db.select().from(cameras).where(eq(cameras.id, input.cameraId)).limit(1);
+      if (!cam) throw new TRPCError({ code: "NOT_FOUND", message: "Камера не найдена" });
+      await requireProjectAccess(db, ctx.user, cam.projectId, "viewer");
+      const url = await buildTimelapse(input.cameraId, new Date(input.start), new Date(input.end), input.fps);
+      if (!url) {
+        throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: "Недостаточно кадров для таймлапса" });
+      }
+      await logActivity(db, cam.projectId, ctx.user.id, "TIMELAPSE_CREATED", "camera", input.cameraId);
+      return { url };
+    }),
 });

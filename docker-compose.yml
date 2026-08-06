@@ -50,7 +50,30 @@ services:
     command: >
       sh -c "pnpm db:push --force && node dist/index.js"
 
+  backup:
+    build:
+      context: ./scripts/backup
+      dockerfile: Dockerfile
+    container_name: freonn-backup
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      BACKUP_DIR: /backups
+      UPLOADS_DIR: /app/uploads
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-freonn}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-freonn}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-freonn_platform}
+    volumes:
+      - uploads:/app/uploads:ro
+      - backups:/backups
+    depends_on:
+      - mysql
+      - app
+
 volumes:
   mysql_data:
   go2rtc_data:
   uploads:
+  backups:

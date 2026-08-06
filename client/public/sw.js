@@ -28,6 +28,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Don't cache the service worker itself, otherwise updates can never reach the client.
+  if (url.pathname === "/sw.js") {
+    return;
+  }
+
   // Always go to the network for the shell so HTML updates are picked up.
   if (url.pathname === "/" || url.pathname.endsWith(".html")) {
     event.respondWith(
