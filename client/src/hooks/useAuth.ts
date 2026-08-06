@@ -4,8 +4,20 @@ import { trpc } from "@/lib/trpc";
 const TOKEN_KEY = "freonn_platform_token";
 
 export function useAuth() {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const me = trpc.auth.me.useQuery(undefined, { enabled: !!token, retry: false });
+  const [token, setToken] = useState<string | null>(() =>
+    localStorage.getItem(TOKEN_KEY)
+  );
+  const me = trpc.auth.me.useQuery(undefined, {
+    enabled: !!token,
+    retry: false,
+  });
+  const isUnauthorized = me.error?.data?.code === "UNAUTHORIZED";
+
+  useEffect(() => {
+    if (me.error?.data?.code === "UNAUTHORIZED") {
+      setToken(null);
+    }
+  }, [me.error]);
 
   useEffect(() => {
     if (token) {
@@ -24,8 +36,8 @@ export function useAuth() {
     token,
     setToken,
     user: me.data ?? null,
-    isLoading: me.isLoading,
-    isAuthenticated: !!token && !!me.data,
+    isLoading: !!token && me.isLoading,
+    isAuthenticated: !!token && !isUnauthorized && (!!me.data || !!me.error),
     logout,
   };
 }

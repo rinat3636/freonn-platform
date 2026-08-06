@@ -121,6 +121,11 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      onError: ({ error, path, type }) => {
+        if (error.code === "INTERNAL_SERVER_ERROR") {
+          console.error(`[tRPC] ${type} ${path ?? "<unknown>"}`, error);
+        }
+      },
     }),
   );
 
