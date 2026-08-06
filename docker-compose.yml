@@ -24,8 +24,7 @@ services:
     image: alexxit/go2rtc:latest
     container_name: freonn-go2rtc
     restart: unless-stopped
-    ports:
-      - "${GO2RTC_HOST_PORT:-1984}:1984"
+    # Not exposed on the host; video streams are proxied through the app at /api/hls
     volumes:
       - go2rtc_data:/config
 

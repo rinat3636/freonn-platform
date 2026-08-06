@@ -12,6 +12,8 @@ import { rateLimit } from "./rateLimit";
 import { applySecurityHeaders } from "./securityHeaders";
 import { serveStatic, setupVite } from "./vite";
 import { verifySessionToken, COOKIE_NAME } from "./auth";
+import { createUploadAuthMiddleware } from "./uploadAuth";
+import { createHlsProxyMiddleware } from "./hlsProxy";
 import { parse as parseCookie } from "cookie";
 import { getUploadDir } from "./paths";
 import { startRecorderJobs } from "../jobs/recorder";
@@ -64,7 +66,7 @@ async function startServer() {
 
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
-  app.use("/uploads", express.static(getUploadDir(), { maxAge: "30d", index: false }));
+  app.use("/uploads", createUploadAuthMiddleware(), express.static(getUploadDir(), { maxAge: "30d", index: false }));
 
   applySecurityHeaders(app);
 
@@ -109,6 +111,8 @@ async function startServer() {
       res.status(500).json({ success: false, error: "Ошибка загрузки файла" });
     }
   });
+
+  app.use("/api/hls", createHlsProxyMiddleware());
 
   app.use(
     "/api/trpc",

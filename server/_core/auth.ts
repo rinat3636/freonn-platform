@@ -1,9 +1,12 @@
 import bcryptjs from "bcryptjs";
 import { jwtVerify } from "jose";
 import { createHmac } from "node:crypto";
-import { stringifySetCookie } from "cookie";
+import { stringifySetCookie, parse as parseCookie } from "cookie";
+import { eq } from "drizzle-orm";
 import type { Response } from "express";
 import { ENV } from "./env";
+import { getDb } from "../db";
+import * as schema from "../../drizzle/schema";
 
 const JWT_ALGORITHM = "HS256";
 export const COOKIE_NAME = "app_session_id";
@@ -63,6 +66,19 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   } catch {
     return null;
   }
+}
+
+export async function resolveUserFromRequest(req: { headers: { authorization?: string; cookie?: string } }): Promise<schema.User | null> {
+  const authHeader = req.headers.authorization;
+  const cookies = parseCookie(req.headers.cookie ?? "");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : cookies[COOKIE_NAME];
+  if (!token) return null;
+  const payload = await verifySessionToken(token);
+  if (!payload) return null;
+  const db = await getDb();
+  if (!db) return null;
+  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, payload.userId)).limit(1);
+  return user?.isActive ? user : null;
 }
 
 export function setSessionCookie(res: Response, token: string) {

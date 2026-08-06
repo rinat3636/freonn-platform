@@ -30,8 +30,7 @@ function getStreamPath(camera: Camera): string {
 }
 
 function getHlsUrl(camera: Camera): string {
-  const base = ENV.go2rtcPublicUrl.replace(/\/$/, "");
-  return `${base}/${getStreamPath(camera)}/index.m3u8`;
+  return `/api/hls/${encodeURIComponent(getStreamPath(camera))}/index.m3u8`;
 }
 
 async function syncCameraToGo2rtc(camera: Camera) {
