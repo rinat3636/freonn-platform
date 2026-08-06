@@ -29,11 +29,11 @@ import {
 export default function StagePhotos({
   projectId,
   canEdit,
-  canDelete,
+  canPlan,
 }: {
   projectId: number;
   canEdit: boolean;
-  canDelete: boolean;
+  canPlan: boolean;
 }) {
   const stages = trpc.stages.list.useQuery({ projectId });
   const [stageId, setStageId] = useState<string>("all");
@@ -150,7 +150,7 @@ export default function StagePhotos({
                   className="h-full w-full object-cover transition group-hover:scale-105"
                 />
               )}
-              {canDelete && (
+              {canPlan && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -210,7 +210,7 @@ export default function StagePhotos({
             ) : (
               <img src={preview.url} alt="" className="w-full rounded-xl" />
             )}
-            {canDelete && (
+            {canPlan && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

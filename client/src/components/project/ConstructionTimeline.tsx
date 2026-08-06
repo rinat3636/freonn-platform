@@ -65,11 +65,11 @@ function dateValue(value: Date | string | null | undefined) {
 export default function ConstructionTimeline({
   projectId,
   canEdit,
-  canDelete,
+  canPlan,
 }: {
   projectId: number;
   canEdit: boolean;
-  canDelete: boolean;
+  canPlan: boolean;
 }) {
   const stages = trpc.stages.list.useQuery({ projectId });
   const reorder = trpc.stages.update.useMutation({
@@ -119,7 +119,7 @@ export default function ConstructionTimeline({
 
   return (
     <div className="space-y-5">
-      {canEdit && (
+      {canPlan && (
         <Card className="rounded-2xl border border-border/50 shadow-sm">
           <CardContent className="p-4">
             <form
@@ -204,7 +204,7 @@ export default function ConstructionTimeline({
                   <div className="mt-1 text-xs text-muted-foreground">
                     {stage.progressPercent}% · {labels[stage.status]}
                   </div>
-                  {canEdit && (
+                  {canPlan && (
                     <div className="relative z-20 mt-2 flex justify-center gap-1">
                       <Button
                         type="button"
@@ -254,7 +254,7 @@ export default function ConstructionTimeline({
           stage={selected}
           projectId={projectId}
           canEdit={canEdit}
-          canDelete={canDelete}
+          canPlan={canPlan}
           onClose={() => setSelected(null)}
           onUpdated={() => {
             stages.refetch();
@@ -275,7 +275,7 @@ function StageDialog({
   stage,
   projectId,
   canEdit,
-  canDelete,
+  canPlan,
   onClose,
   onUpdated,
   onMediaUpdated,
@@ -284,7 +284,7 @@ function StageDialog({
   stage: any;
   projectId: number;
   canEdit: boolean;
-  canDelete: boolean;
+  canPlan: boolean;
   onClose: () => void;
   onUpdated: () => void;
   onMediaUpdated: () => void;
@@ -384,7 +384,7 @@ function StageDialog({
                 type="date"
                 value={plannedStart}
                 onChange={e => setPlannedStart(e.target.value)}
-                disabled={!canEdit}
+                disabled={!canPlan}
               />
             </div>
             <div className="space-y-1">
@@ -393,10 +393,10 @@ function StageDialog({
                 type="date"
                 value={plannedEnd}
                 onChange={e => setPlannedEnd(e.target.value)}
-                disabled={!canEdit}
+                disabled={!canPlan}
               />
             </div>
-            {canEdit && (
+            {canPlan && (
               <Button
                 type="button"
                 variant="outline"
@@ -458,7 +458,7 @@ function StageDialog({
               </div>
             </div>
           )}
-          {canDelete && (
+          {canPlan && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
