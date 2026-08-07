@@ -50,7 +50,7 @@ function AppRouter() {
 
 export default function App({ onReady }: { onReady?: () => void }) {
   const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
     if (!isLoading) {
@@ -66,6 +66,11 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const isPublic = publicPaths.some(
     path => location === path || location.startsWith(`${path}?`)
   );
+
+  if (isAuthenticated && isPublic) {
+    navigate("/", { replace: true });
+    return <PwaSplash />;
+  }
 
   if (!isAuthenticated && !isPublic) {
     return <LoginPage />;
