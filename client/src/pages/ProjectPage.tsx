@@ -232,10 +232,10 @@ export default function ProjectPage() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="min-w-[2.5rem] shrink-0 flex-col gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary sm:min-w-[3.75rem] sm:gap-1 sm:px-2 sm:py-2 sm:text-[11px]"
+                  className="min-w-[3.5rem] shrink-0 flex-col gap-1 rounded-2xl px-2 py-2 text-[10px] font-semibold text-muted-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary sm:min-w-[4.5rem] sm:px-3 sm:py-2.5 sm:text-[11px]"
                 >
-                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <Icon className="h-5 w-5" />
+                  <span>{tab.label}</span>
                 </TabsTrigger>
               );
             })}

@@ -43,19 +43,15 @@ function Stat({
   value: string;
 }) {
   return (
-    <Card className="rounded-2xl border border-border/50 shadow-sm">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {label}
-          </div>
-          <div className="truncate text-xl font-extrabold">{value}</div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 shadow-sm">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className="truncate text-lg font-bold">{value}</div>
+      </div>
+    </div>
   );
 }
 
@@ -85,24 +81,12 @@ export default function ObjectDashboard({
   return (
     <div className="space-y-6">
       <ConstructionTimer project={p} />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Stat
-          icon={CheckCircle2}
-          label="Прогресс"
-          value={`${p.progressPercent}%`}
-        />
+      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-1">
+        <Stat icon={CheckCircle2} label="Прогресс" value={`${p.progressPercent}%`} />
         <Stat icon={ImageIcon} label="Фото" value={String(p.counts.photos)} />
-        <Stat
-          icon={FileText}
-          label="Документы"
-          value={String(p.counts.documents)}
-        />
+        <Stat icon={FileText} label="Документы" value={String(p.counts.documents)} />
         <Stat icon={Camera} label="Камеры" value={String(p.counts.cameras)} />
-        <Stat
-          icon={Building2}
-          label="Этапы"
-          value={`${p.counts.stagesDone}/${p.counts.stagesTotal}`}
-        />
+        <Stat icon={Building2} label="Этапы" value={`${p.counts.stagesDone}/${p.counts.stagesTotal}`} />
       </div>
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="rounded-2xl border border-border/50 shadow-sm">

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { DashboardHeader } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -373,64 +373,48 @@ export default function DashboardPage() {
         )}
       </DashboardHeader>
 
-      <div className="mb-8 grid grid-cols-3 gap-3 sm:gap-5">
-        <Card className="app-elevated rounded-2xl border border-border/50">
-          <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-12 sm:w-12 sm:rounded-2xl">
-              <Building2 className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-            <div className="text-center sm:text-left">
-              <div className="text-xl font-extrabold sm:text-2xl">
-                {projects.data?.length ?? 0}
-              </div>
-              <div className="text-[10px] font-medium text-muted-foreground sm:text-sm">
-                Всего
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="app-elevated rounded-2xl border border-border/50">
-          <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 sm:h-12 sm:w-12 sm:rounded-2xl">
-              <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-            <div className="text-center sm:text-left">
-              <div className="text-xl font-extrabold sm:text-2xl">{activeCount}</div>
-              <div className="text-[10px] font-medium text-muted-foreground sm:text-sm">
-                Активных
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="app-elevated rounded-2xl border border-border/50">
-          <CardContent className="flex flex-col items-center justify-center gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/10 text-destructive sm:h-12 sm:w-12 sm:rounded-2xl">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-            <div className="text-center sm:text-left">
-              <div className="text-xl font-extrabold sm:text-2xl">{overdueCount}</div>
-              <div className="text-[10px] font-medium text-muted-foreground sm:text-sm">
-                Просрочено
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mb-5 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-2 rounded-2xl bg-card px-4 py-2.5 border border-border/60">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Building2 className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-base font-bold leading-none">{projects.data?.length ?? 0}</div>
+            <div className="text-[10px] font-medium text-muted-foreground">Всего</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-2xl bg-card px-4 py-2.5 border border-border/60">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <ArrowUpRight className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-base font-bold leading-none">{activeCount}</div>
+            <div className="text-[10px] font-medium text-muted-foreground">Активных</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-2xl bg-card px-4 py-2.5 border border-border/60">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <Calendar className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-base font-bold leading-none">{overdueCount}</div>
+            <div className="text-[10px] font-medium text-muted-foreground">Просрочено</div>
+          </div>
+        </div>
       </div>
 
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="relative mb-4">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Поиск по объектам…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="app-elevated h-12 max-w-md rounded-2xl border-border/60 bg-card pl-10"
+          className="h-12 w-full rounded-2xl border-0 bg-muted pl-11 text-base shadow-none focus-visible:ring-2 focus-visible:ring-primary"
         />
       </div>
 
       {projects.isLoading && (
-        <div className="text-muted-foreground font-medium">
-          Загрузка объектов…
-        </div>
+        <div className="text-muted-foreground font-medium py-8 text-center">Загрузка объектов…</div>
       )}
       {!projects.isLoading && filtered?.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -451,77 +435,51 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-3">
         {filtered?.map(project => {
           const left = daysLeft(project.plannedEndDate);
-          const barColor = indicatorColor(
-            project.progressPercent,
-            project.startDate,
-            project.plannedEndDate
-          );
-          const schedule = scheduleStatus(
-            project.progressPercent,
-            project.startDate,
-            project.plannedEndDate,
-            project.status
-          );
+          const barColor = indicatorColor(project.progressPercent, project.startDate, project.plannedEndDate);
+          const schedule = scheduleStatus(project.progressPercent, project.startDate, project.plannedEndDate, project.status);
           return (
             <Link key={project.id} href={`/projects/${project.id}`}>
-              <Card className="app-elevated group h-full cursor-pointer rounded-2xl border border-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="flex items-start gap-2 text-xl font-extrabold leading-tight transition-colors line-clamp-2 group-hover:text-primary">
-                      <span
-                        className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${project.status === "active" ? "bg-emerald-500" : project.status === "completed" ? "bg-slate-400" : project.status === "paused" ? "bg-amber-500" : "bg-red-500"}`}
-                      />
-                      {project.name}
-                    </CardTitle>
-                    <Badge
-                      className={`shrink-0 ${left.color}`}
-                      variant="outline"
-                    >
+              <div className="group flex items-center gap-4 rounded-2xl bg-card p-4 border border-border/60 transition-all active:scale-[0.99] hover:border-primary/30">
+                <div
+                  className={`h-3 w-3 shrink-0 rounded-full ${
+                    project.status === "active"
+                      ? "bg-emerald-500"
+                      : project.status === "completed"
+                      ? "bg-slate-400"
+                      : project.status === "paused"
+                      ? "bg-amber-500"
+                      : "bg-red-500"
+                  }`}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold leading-snug truncate group-hover:text-primary transition-colors">{project.name}</h3>
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${left.color}`}>
                       {left.text}
-                    </Badge>
-                  </div>
-                  {schedule && (
-                    <Badge
-                      variant="outline"
-                      className={`mt-2 w-fit ${schedule.className}`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-current" />
-                      {schedule.label}
-                    </Badge>
-                  )}
-                  {project.address && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" />{" "}
-                      {project.address}
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-2 flex items-center justify-between text-sm font-medium">
-                    <span className="text-muted-foreground">Прогресс</span>
-                    <span className="font-bold">
-                      {project.progressPercent}%
                     </span>
                   </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-full rounded-full ${barColor} transition-all duration-500`}
-                      style={{ width: `${project.progressPercent}%` }}
-                    />
-                  </div>
-                  {project.plannedEndDate && (
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                      <Calendar className="h-3.5 w-3.5 shrink-0" /> Сдача:{" "}
-                      {new Date(project.plannedEndDate).toLocaleDateString(
-                        "ru-RU"
-                      )}
+                  {project.address && (
+                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground truncate">
+                      <MapPin className="h-3 w-3 shrink-0" /> {project.address}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                  <div className="mt-3 flex items-center gap-2">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${project.progressPercent}%` }} />
+                    </div>
+                    <span className="text-xs font-bold w-8 text-right">{project.progressPercent}%</span>
+                  </div>
+                  {schedule && (
+                    <div className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${schedule.className}`}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {schedule.label}
+                    </div>
+                  )}
+                </div>
+              </div>
             </Link>
           );
         })}
