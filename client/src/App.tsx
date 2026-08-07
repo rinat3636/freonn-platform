@@ -52,23 +52,28 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, navigate] = useLocation();
 
+  const publicPaths = ["/login", "/forgot-password", "/reset-password"];
+  const isPublic = publicPaths.some(
+    path => location === path || location.startsWith(`${path}?`)
+  );
+
   useEffect(() => {
     if (!isLoading) {
       onReady?.();
     }
   }, [isLoading, onReady]);
 
+  useEffect(() => {
+    if (isAuthenticated && isPublic) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, isPublic, navigate]);
+
   if (isLoading) {
     return <PwaSplash />;
   }
 
-  const publicPaths = ["/login", "/forgot-password", "/reset-password"];
-  const isPublic = publicPaths.some(
-    path => location === path || location.startsWith(`${path}?`)
-  );
-
   if (isAuthenticated && isPublic) {
-    navigate("/", { replace: true });
     return <PwaSplash />;
   }
 
