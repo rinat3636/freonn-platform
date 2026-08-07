@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,12 @@ import { Loader2 } from "lucide-react";
 import FreonnLogo from "@/components/FreonnLogo";
 
 export default function LoginPage() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<"login" | "register">("login");
+
+  useEffect(() => {
+    if (user) window.location.href = "/";
+  }, [user]);
 
   const login = trpc.auth.login.useMutation({
     onSuccess: () => {
